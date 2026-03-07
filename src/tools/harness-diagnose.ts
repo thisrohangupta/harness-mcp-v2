@@ -46,6 +46,7 @@ interface StageSummary {
   ended_at?: string;
   duration_ms?: number;
   duration_human?: string;
+  failure_message?: string;
   steps: StepSummary[];
 }
 
@@ -66,6 +67,7 @@ function collectSteps(
   nodeId: string,
   steps: StepSummary[],
   visited: Set<string>,
+  nodeMap?: Record<string, Record<string, unknown>>,
 ): void {
   if (visited.has(nodeId)) return;
   visited.add(nodeId);
@@ -85,22 +87,30 @@ function collectSteps(
     duration_human: durationMs != null ? formatDuration(durationMs) : undefined,
   };
 
-  if (node.failureInfo?.message) {
-    step.failure_message = node.failureInfo.message;
+  // failureInfo may be in layoutNodeMap or in executionGraph.nodeMap
+  const failureMsg =
+    node.failureInfo?.message ||
+    (nodeMap?.[nodeId]?.failureInfo as { message?: string } | undefined)?.message;
+  if (failureMsg) {
+    step.failure_message = failureMsg;
   }
 
   steps.push(step);
 
   // Recurse into children, then follow nextIds at the same level
   for (const childId of node.edgeLayoutList?.currentNodeChildren ?? []) {
-    collectSteps(layoutNodeMap, childId, steps, visited);
+    collectSteps(layoutNodeMap, childId, steps, visited, nodeMap);
   }
   for (const nextId of node.edgeLayoutList?.nextIds ?? []) {
-    collectSteps(layoutNodeMap, nextId, steps, visited);
+    collectSteps(layoutNodeMap, nextId, steps, visited, nodeMap);
   }
 }
 
-function extractStages(layoutNodeMap: Record<string, NodeInfo>, startingNodeId: string): StageSummary[] {
+function extractStages(
+  layoutNodeMap: Record<string, NodeInfo>,
+  startingNodeId: string,
+  nodeMap?: Record<string, Record<string, unknown>>,
+): StageSummary[] {
   const stages: StageSummary[] = [];
   const visited = new Set<string>();
 
@@ -119,7 +129,7 @@ function extractStages(layoutNodeMap: Record<string, NodeInfo>, startingNodeId: 
       const steps: StepSummary[] = [];
       const stepVisited = new Set<string>();
       for (const childId of node.edgeLayoutList?.currentNodeChildren ?? []) {
-        collectSteps(layoutNodeMap, childId, steps, stepVisited);
+        collectSteps(layoutNodeMap, childId, steps, stepVisited, nodeMap);
       }
 
       stages.push({
@@ -130,6 +140,7 @@ function extractStages(layoutNodeMap: Record<string, NodeInfo>, startingNodeId: 
         ended_at: endTs ? new Date(endTs).toISOString() : undefined,
         duration_ms: durationMs,
         duration_human: durationMs != null ? formatDuration(durationMs) : undefined,
+        failure_message: node.failureInfo?.message,
         steps,
       });
     } else {
@@ -187,12 +198,14 @@ function buildExecutionSummary(
     },
   };
 
-  // Walk layoutNodeMap to extract stages
+  // Walk layoutNodeMap for structure, enrich with executionGraph.nodeMap for failure details
   const layoutNodeMap = pes.layoutNodeMap as Record<string, NodeInfo> | undefined;
   const startingNodeId = pes.startingNodeId as string | undefined;
+  const executionGraph = execution.executionGraph as Record<string, unknown> | undefined;
+  const nodeMap = executionGraph?.nodeMap as Record<string, Record<string, unknown>> | undefined;
 
   if (layoutNodeMap && startingNodeId) {
-    const stages = extractStages(layoutNodeMap, startingNodeId);
+    const stages = extractStages(layoutNodeMap, startingNodeId, nodeMap);
     summary.stages = stages;
 
     // Identify failed stage and step
@@ -204,7 +217,7 @@ function buildExecutionSummary(
       summary.failure = {
         stage: failedStage.name,
         step: failedStep?.name,
-        error: failedStep?.failure_message,
+        error: failedStep?.failure_message ?? failedStage.failure_message,
       };
     }
 
