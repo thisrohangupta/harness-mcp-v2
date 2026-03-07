@@ -11,9 +11,9 @@ import { applyUrlDefaults } from "../utils/url-parser.js";
 
 const log = createLogger("diagnose");
 
-// ─── Execution summary builder ───────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-interface NodeInfo {
+interface LayoutNode {
   nodeType?: string;
   nodeGroup?: string;
   nodeIdentifier?: string;
@@ -27,6 +27,28 @@ interface NodeInfo {
     currentNodeChildren?: string[];
     nextIds?: string[];
   };
+}
+
+interface ExecGraphNode {
+  uuid?: string;
+  name?: string;
+  identifier?: string;
+  baseFqn?: string;
+  status?: string;
+  stepType?: string;
+  startTs?: number;
+  endTs?: number;
+  failureInfo?: {
+    message?: string;
+    failureTypeList?: string[];
+    responseMessages?: Array<{ message?: string }>;
+  };
+  logBaseKey?: string;
+  delegateInfoList?: Array<{ id?: string; name?: string }>;
+  unitProgresses?: Array<{ unitName?: string; status?: string }>;
+  executableResponses?: Array<{
+    task?: { logKeys?: string[] };
+  }>;
 }
 
 interface StepSummary {
@@ -50,6 +72,16 @@ interface StageSummary {
   steps: StepSummary[];
 }
 
+interface FailedNodeDetail {
+  stage: string;
+  step: string;
+  failure_message: string;
+  log_key?: string;
+  delegate?: string;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   const seconds = Math.floor(ms / 1000);
@@ -62,12 +94,13 @@ function formatDuration(ms: number): string {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
+/** Walk layoutNodeMap to collect step summaries under a stage node. */
 function collectSteps(
-  layoutNodeMap: Record<string, NodeInfo>,
+  layoutNodeMap: Record<string, LayoutNode>,
   nodeId: string,
   steps: StepSummary[],
   visited: Set<string>,
-  nodeMap?: Record<string, Record<string, unknown>>,
+  nodeMap?: Record<string, ExecGraphNode>,
 ): void {
   if (visited.has(nodeId)) return;
   visited.add(nodeId);
@@ -79,25 +112,20 @@ function collectSteps(
   const endTs = node.endTs;
   const durationMs = startTs && endTs ? endTs - startTs : undefined;
 
-  const step: StepSummary = {
+  // failureInfo may be in layoutNodeMap or in executionGraph.nodeMap
+  const failureMsg =
+    node.failureInfo?.message ||
+    nodeMap?.[nodeId]?.failureInfo?.message;
+
+  steps.push({
     name: node.name ?? nodeId,
     identifier: node.nodeIdentifier ?? nodeId,
     status: node.status ?? "Unknown",
     duration_ms: durationMs,
     duration_human: durationMs != null ? formatDuration(durationMs) : undefined,
-  };
+    failure_message: failureMsg || undefined,
+  });
 
-  // failureInfo may be in layoutNodeMap or in executionGraph.nodeMap
-  const failureMsg =
-    node.failureInfo?.message ||
-    (nodeMap?.[nodeId]?.failureInfo as { message?: string } | undefined)?.message;
-  if (failureMsg) {
-    step.failure_message = failureMsg;
-  }
-
-  steps.push(step);
-
-  // Recurse into children, then follow nextIds at the same level
   for (const childId of node.edgeLayoutList?.currentNodeChildren ?? []) {
     collectSteps(layoutNodeMap, childId, steps, visited, nodeMap);
   }
@@ -106,10 +134,11 @@ function collectSteps(
   }
 }
 
+/** Walk layoutNodeMap to extract stage-level structure. */
 function extractStages(
-  layoutNodeMap: Record<string, NodeInfo>,
+  layoutNodeMap: Record<string, LayoutNode>,
   startingNodeId: string,
-  nodeMap?: Record<string, Record<string, unknown>>,
+  nodeMap?: Record<string, ExecGraphNode>,
 ): StageSummary[] {
   const stages: StageSummary[] = [];
   const visited = new Set<string>();
@@ -141,17 +170,15 @@ function extractStages(
         duration_ms: durationMs,
         duration_human: durationMs != null ? formatDuration(durationMs) : undefined,
         failure_message: node.failureInfo?.message ||
-          (nodeMap?.[nodeId]?.failureInfo as { message?: string } | undefined)?.message,
+          nodeMap?.[nodeId]?.failureInfo?.message,
         steps,
       });
     } else {
-      // Non-stage wrapper (e.g. parallel group) — recurse into children
       for (const childId of node.edgeLayoutList?.currentNodeChildren ?? []) {
         walkNode(childId);
       }
     }
 
-    // Follow next siblings
     for (const nextId of node.edgeLayoutList?.nextIds ?? []) {
       walkNode(nextId);
     }
@@ -161,58 +188,67 @@ function extractStages(
   return stages;
 }
 
-interface FailedStepInfo {
-  stage_identifier: string;
-  step_identifier: string;
-  step_name: string;
-  failure_message: string;
-}
+/**
+ * Walk executionGraph.nodeMap to find failed leaf step nodes with detailed
+ * failureInfo and logBaseKey. Only available when renderFullBottomGraph=true.
+ *
+ * Filters out pipeline-level and section wrapper nodes, preferring actual
+ * step nodes (those with `.steps.` in baseFqn).
+ */
+function findFailedNodes(nodeMap: Record<string, ExecGraphNode>): FailedNodeDetail[] {
+  const stepNodes: FailedNodeDetail[] = [];
+  const stageNodes: FailedNodeDetail[] = [];
 
-/** Extract failed steps with their parent stage identifiers from the summary stages.
- *  Falls back to the stage's own failureInfo when no child steps carry a failure_message
- *  (common for CD stages where layoutNodeMap lacks step-level children). */
-function findFailedSteps(stages: StageSummary[]): FailedStepInfo[] {
-  const failed: FailedStepInfo[] = [];
-  for (const stage of stages) {
-    if (stage.status !== "Failed" && stage.status !== "Errored" && stage.status !== "Aborted") continue;
+  for (const node of Object.values(nodeMap)) {
+    if (node.status !== "Failed" && node.status !== "Errored" && node.status !== "Aborted") continue;
 
-    let stageHasStepFailure = false;
-    for (const step of stage.steps) {
-      if (step.failure_message) {
-        stageHasStepFailure = true;
-        failed.push({
-          stage_identifier: stage.identifier,
-          step_identifier: step.identifier,
-          step_name: step.name,
-          failure_message: step.failure_message,
-        });
-      }
-    }
+    const msg = node.failureInfo?.message;
+    if (!msg) continue;
 
-    if (!stageHasStepFailure && stage.failure_message) {
-      failed.push({
-        stage_identifier: stage.identifier,
-        step_identifier: stage.identifier,
-        step_name: stage.name,
-        failure_message: stage.failure_message,
-      });
+    const fqn = node.baseFqn ?? "";
+
+    // Skip the pipeline root node entirely
+    if (node.identifier === "pipeline" || fqn === "pipeline") continue;
+
+    // Extract stage identifier from baseFqn (e.g. pipeline.stages.MyStage.spec...)
+    const stageMatch = fqn.match(/\.stages\.([^.]+)\./);
+    const stageId = stageMatch?.[1] ?? node.identifier ?? "unknown";
+
+    // Skip nodes where we can't determine a proper stage (e.g. `pipeline.stages` wrapper)
+    if (!stageMatch && fqn.startsWith("pipeline.stages") && !fqn.includes(".spec.")) continue;
+    const delegate = node.delegateInfoList?.[0]?.name;
+
+    const detail: FailedNodeDetail = {
+      stage: stageId,
+      step: node.identifier ?? node.name ?? "unknown",
+      failure_message: msg,
+      log_key: node.logBaseKey,
+      delegate,
+    };
+
+    // baseFqn with `.steps.` = actual step node; otherwise it's a stage/section wrapper
+    if (fqn.includes(".steps.")) {
+      stepNodes.push(detail);
+    } else {
+      stageNodes.push(detail);
     }
   }
-  return failed;
+
+  // Prefer leaf step nodes; fall back to stage-level if no steps found
+  return stepNodes.length > 0 ? stepNodes : stageNodes;
 }
 
-
 /**
- * Transform the raw execution response into a structured summary report.
- * Falls back to returning the raw data if the expected structure is missing.
+ * Build structured execution summary from the raw API response.
+ * Uses layoutNodeMap for stage structure, executionGraph.nodeMap for step-level failure detail.
  */
 function buildExecutionSummary(
   execution: Record<string, unknown>,
   config: Config,
   input: Record<string, unknown>,
-): Record<string, unknown> {
+): { summary: Record<string, unknown>; failedNodes: FailedNodeDetail[] } {
   const pes = execution.pipelineExecutionSummary as Record<string, unknown> | undefined;
-  if (!pes) return execution;
+  if (!pes) return { summary: execution, failedNodes: [] };
 
   const startTs = pes.startTs as number | undefined;
   const endTs = pes.endTs as number | undefined;
@@ -240,28 +276,15 @@ function buildExecutionSummary(
     },
   };
 
-  // Walk layoutNodeMap for structure, enrich with executionGraph.nodeMap for failure details
-  const layoutNodeMap = pes.layoutNodeMap as Record<string, NodeInfo> | undefined;
+  // Stage structure from layoutNodeMap, enriched with executionGraph.nodeMap for failure details
+  const layoutNodeMap = pes.layoutNodeMap as Record<string, LayoutNode> | undefined;
   const startingNodeId = pes.startingNodeId as string | undefined;
   const executionGraph = execution.executionGraph as Record<string, unknown> | undefined;
-  const nodeMap = executionGraph?.nodeMap as Record<string, Record<string, unknown>> | undefined;
+  const nodeMap = executionGraph?.nodeMap as Record<string, ExecGraphNode> | undefined;
 
   if (layoutNodeMap && startingNodeId) {
     const stages = extractStages(layoutNodeMap, startingNodeId, nodeMap);
     summary.stages = stages;
-
-    // Identify failed stage and step
-    const failedStage = stages.find(
-      (s) => s.status === "Failed" || s.status === "Errored" || s.status === "Aborted",
-    );
-    if (failedStage) {
-      const failedStep = failedStage.steps.find((s) => s.failure_message);
-      summary.failure = {
-        stage: failedStage.name,
-        step: failedStep?.name,
-        error: failedStep?.failure_message ?? failedStage.failure_message,
-      };
-    }
 
     // Identify bottleneck (longest completed stage)
     const completedStages = stages.filter((s) => s.duration_ms != null && s.duration_ms > 0);
@@ -276,7 +299,46 @@ function buildExecutionSummary(
     }
   }
 
-  // Build execution deep link
+  // Step-level failure detail from executionGraph.nodeMap (requires renderFullBottomGraph)
+  let failedNodes: FailedNodeDetail[] = [];
+  if (nodeMap) {
+    failedNodes = findFailedNodes(nodeMap);
+  }
+
+  // Build failure summary — prefer executionGraph detail over layoutNodeMap stage-level info
+  if (failedNodes.length > 0) {
+    const primary = failedNodes[0];
+    summary.failure = {
+      stage: primary.stage,
+      step: primary.step,
+      error: primary.failure_message,
+      delegate: primary.delegate,
+    };
+    if (failedNodes.length > 1) {
+      summary.all_failures = failedNodes.map((f) => ({
+        stage: f.stage,
+        step: f.step,
+        error: f.failure_message,
+        delegate: f.delegate,
+      }));
+    }
+  } else {
+    // Fall back to layoutNodeMap stage-level failure
+    const stages = summary.stages as StageSummary[] | undefined;
+    const failedStage = stages?.find(
+      (s) => s.status === "Failed" || s.status === "Errored" || s.status === "Aborted",
+    );
+    if (failedStage) {
+      const failedStep = failedStage.steps.find((s) => s.failure_message);
+      summary.failure = {
+        stage: failedStage.name,
+        step: failedStep?.name,
+        error: failedStep?.failure_message ?? failedStage.failure_message,
+      };
+    }
+  }
+
+  // Execution deep link
   const orgId = (input.org_id as string) ?? config.HARNESS_DEFAULT_ORG_ID;
   const projectId = (input.project_id as string) ?? config.HARNESS_DEFAULT_PROJECT_ID;
   const pipelineIdentifier = pes.pipelineIdentifier as string | undefined;
@@ -288,10 +350,10 @@ function buildExecutionSummary(
     summary.openInHarness = execution.openInHarness;
   }
 
-  return summary;
+  return { summary, failedNodes };
 }
 
-/** Keep only the last `n` lines of a string. Returns the full string when n <= 0. */
+/** Keep only the last `n` lines of a string. */
 function tailLines(text: string, n: number): { text: string; truncated: boolean; totalLines: number } {
   if (n <= 0) return { text, truncated: false, totalLines: text.split("\n").length };
   const lines = text.split("\n");
@@ -303,9 +365,7 @@ function tailLines(text: string, n: number): { text: string; truncated: boolean;
   };
 }
 
-/** Truncate a log blob (string or object) using tailLines.
- *  Detects log-service zip-queued responses and replaces them with a clean signal
- *  instead of passing through a download link the LLM can't use. */
+/** Truncate a log blob. Detects zip-queued responses and replaces with a clean signal. */
 function truncateLog(raw: unknown, maxLines: number): unknown {
   if (typeof raw === "string") {
     const result = tailLines(raw, maxLines);
@@ -323,7 +383,7 @@ function truncateLog(raw: unknown, maxLines: number): unknown {
 export function registerDiagnoseTool(server: McpServer, registry: Registry, client: HarnessClient, config: Config): void {
   server.tool(
     "harness_diagnose",
-    "Analyze a pipeline execution — returns a structured report with stage/step breakdown, timing, bottlenecks, and failure details (stage, step, error message). Accepts an execution_id, a pipeline_id (auto-fetches latest execution), or a Harness URL.",
+    "Analyze a pipeline execution — returns a structured report with stage/step breakdown, timing, bottlenecks, and failure details including the exact failed step, error message, and delegate. Accepts an execution_id, a pipeline_id (auto-fetches latest execution), or a Harness URL. Set summary=false for raw diagnostic data with pipeline YAML and execution logs.",
     {
       execution_id: z.string().describe("The pipeline execution ID to analyze. Auto-detected from url if provided.").optional(),
       pipeline_id: z.string().describe("Pipeline identifier — fetches the latest execution automatically when no execution_id is given. Auto-detected from url if provided.").optional(),
@@ -343,7 +403,6 @@ export function registerDiagnoseTool(server: McpServer, registry: Registry, clie
         const pipelineId = input.pipeline_id as string | undefined;
         const isSummary = args.summary !== false;
 
-        // Determine include defaults based on mode
         const includeYaml = args.include_yaml ?? !isSummary;
         const includeLogs = args.include_logs ?? !isSummary;
         const logSnippetLines = args.log_snippet_lines ?? 120;
@@ -381,33 +440,41 @@ export function registerDiagnoseTool(server: McpServer, registry: Registry, clie
         }
 
         const diagnostic: Record<string, unknown> = {};
-
-        // 1. Get execution details → structured summary with stage/step failure info
         let currentStep = 0;
+        let resolvedPipelineId: string | undefined;
+        let failedNodes: FailedNodeDetail[] = [];
+
+        // 1. Get execution details with full graph (includes step-level nodes)
         await sendProgress(extra, currentStep, totalSteps, "Fetching execution details...");
         log.info("Fetching execution details", { executionId });
-        let resolvedPipelineId: string | undefined;
-        let runSequence: number | undefined;
-        let planExecId: string | undefined;
-        let failedSteps: FailedStepInfo[] = [];
         try {
-          const execution = await registry.dispatch(client, "execution", "get", input);
-          const execSummary = buildExecutionSummary(execution as Record<string, unknown>, config, input);
-          diagnostic.execution = execSummary;
+          const execution = await registry.dispatch(client, "execution", "get", {
+            ...input,
+            render_full_graph: true,
+          });
 
           const exec = execution as Record<string, unknown>;
-          const pipelineExec = exec?.pipelineExecutionSummary as Record<string, unknown> | undefined;
-          resolvedPipelineId = pipelineExec?.pipelineIdentifier as string | undefined;
-          runSequence = pipelineExec?.runSequence as number | undefined;
-          planExecId = pipelineExec?.planExecutionId as string | undefined;
+          const pes = exec?.pipelineExecutionSummary as Record<string, unknown> | undefined;
+          resolvedPipelineId = pes?.pipelineIdentifier as string | undefined;
 
-          // Extract failed steps for log fetching
-          const stages = (execSummary.stages as StageSummary[]) ?? [];
-          failedSteps = findFailedSteps(stages);
+          if (isSummary) {
+            const result = buildExecutionSummary(exec, config, input);
+            diagnostic.execution = result.summary;
+            failedNodes = result.failedNodes;
+          } else {
+            diagnostic.execution = execution;
+            // Still extract failed nodes for log fetching in raw mode
+            const execGraph = exec?.executionGraph as Record<string, unknown> | undefined;
+            const graphNodeMap = execGraph?.nodeMap as Record<string, ExecGraphNode> | undefined;
+            if (graphNodeMap) {
+              failedNodes = findFailedNodes(graphNodeMap);
+            }
+          }
+
+          currentStep++;
 
           // 2. Get pipeline YAML if requested
           if (includeYaml && resolvedPipelineId) {
-            currentStep++;
             await sendProgress(extra, currentStep, totalSteps, "Fetching pipeline YAML...");
             try {
               const pipeline = await registry.dispatch(client, "pipeline", "get", {
@@ -419,66 +486,44 @@ export function registerDiagnoseTool(server: McpServer, registry: Registry, clie
               log.warn("Failed to fetch pipeline YAML", { error: String(err) });
               diagnostic.pipeline_error = String(err);
             }
+            currentStep++;
           }
         } catch (err) {
           diagnostic.execution_error = String(err);
         }
 
-        // 3. Get execution logs if requested — fetch only failed step logs for speed and relevance
-        if (includeLogs) {
-          currentStep++;
+        // 3. Get execution logs if requested — use logBaseKey from executionGraph nodes
+        if (includeLogs && failedNodes.length > 0) {
           await sendProgress(extra, currentStep, totalSteps, "Fetching failed step logs...");
 
-          if (resolvedPipelineId && runSequence != null && planExecId) {
-            const basePrefix = `${config.HARNESS_ACCOUNT_ID}/pipeline/${resolvedPipelineId}/${runSequence}/-${planExecId}`;
-
-            if (failedSteps.length > 0) {
-              const capped = maxFailedSteps > 0 ? failedSteps.slice(0, maxFailedSteps) : failedSteps;
-              if (capped.length < failedSteps.length) {
-                diagnostic.failed_steps_truncated = {
-                  shown: capped.length,
-                  total: failedSteps.length,
-                };
-              }
-
-              const logEntries = await Promise.all(
-                capped.map(async (fs) => {
-                  const stepPrefix = `${basePrefix}/${fs.stage_identifier}/${fs.step_identifier}`;
-                  const key = `${fs.stage_identifier}/${fs.step_name}`;
-                  try {
-                    const logData = await registry.dispatch(client, "execution_log", "get", {
-                      ...input,
-                      prefix: stepPrefix,
-                    });
-                    return { key, value: truncateLog(logData, logSnippetLines) };
-                  } catch (err) {
-                    log.warn("Failed to fetch step logs", { step: fs.step_name, error: String(err) });
-                    return { key, value: { error: String(err) } };
-                  }
-                }),
-              );
-
-              const stepLogs: Record<string, unknown> = {};
-              for (const entry of logEntries) {
-                stepLogs[entry.key] = entry.value;
-              }
-              diagnostic.failed_step_logs = stepLogs;
-            } else {
-              // No failed steps found — fall back to pipeline-level prefix
-              try {
-                const logs = await registry.dispatch(client, "execution_log", "get", {
-                  ...input,
-                  prefix: basePrefix,
-                });
-                diagnostic.logs = truncateLog(logs, logSnippetLines);
-              } catch (err) {
-                log.warn("Failed to fetch execution logs", { error: String(err) });
-                diagnostic.logs_error = String(err);
-              }
-            }
-          } else {
-            diagnostic.logs_error = "Could not construct log prefix — missing pipelineIdentifier, runSequence, or planExecutionId from execution response.";
+          const capped = maxFailedSteps > 0 ? failedNodes.slice(0, maxFailedSteps) : failedNodes;
+          if (capped.length < failedNodes.length) {
+            diagnostic.failed_steps_truncated = { shown: capped.length, total: failedNodes.length };
           }
+
+          const logEntries = await Promise.all(
+            capped.map(async (fn) => {
+              const key = `${fn.stage}/${fn.step}`;
+              const prefix = fn.log_key;
+              if (!prefix) return { key, value: { error: "No log key available for this step" } };
+              try {
+                const logData = await registry.dispatch(client, "execution_log", "get", {
+                  ...input,
+                  prefix,
+                });
+                return { key, value: truncateLog(logData, logSnippetLines) };
+              } catch (err) {
+                log.warn("Failed to fetch step logs", { step: fn.step, error: String(err) });
+                return { key, value: { error: String(err) } };
+              }
+            }),
+          );
+
+          const stepLogs: Record<string, unknown> = {};
+          for (const entry of logEntries) {
+            stepLogs[entry.key] = entry.value;
+          }
+          diagnostic.failed_step_logs = stepLogs;
         }
 
         await sendProgress(extra, totalSteps, totalSteps, isSummary ? "Report complete" : "Diagnosis complete");
