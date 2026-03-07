@@ -49,6 +49,13 @@ interface ExecGraphNode {
   executableResponses?: Array<{
     task?: { logKeys?: string[] };
   }>;
+  stepDetails?: {
+    childPipelineExecutionDetails?: {
+      planExecutionId?: string;
+      orgId?: string;
+      projectId?: string;
+    };
+  };
 }
 
 interface StepSummary {
@@ -238,6 +245,45 @@ function findFailedNodes(nodeMap: Record<string, ExecGraphNode>): FailedNodeDeta
   return stepNodes.length > 0 ? stepNodes : stageNodes;
 }
 
+/** Detect if any failed node is a chained (child) pipeline stage. */
+function findChildPipelineRef(
+  nodeMap: Record<string, ExecGraphNode>,
+): { executionId: string; orgId: string; projectId: string } | undefined {
+  for (const node of Object.values(nodeMap)) {
+    if (node.status !== "Failed" && node.status !== "Errored" && node.status !== "Aborted") continue;
+    const child = node.stepDetails?.childPipelineExecutionDetails;
+    if (child?.planExecutionId) {
+      return { executionId: child.planExecutionId, orgId: child.orgId ?? "", projectId: child.projectId ?? "" };
+    }
+  }
+  return undefined;
+}
+
+/** Follow a child pipeline execution and return its failed nodes. */
+async function diagnoseChildPipeline(
+  client: HarnessClient,
+  child: { executionId: string; orgId: string; projectId: string },
+): Promise<FailedNodeDetail[]> {
+  try {
+    const response = await client.request<Record<string, unknown>>({
+      method: "GET",
+      path: `/pipeline/api/pipelines/execution/v2/${child.executionId}`,
+      params: {
+        orgIdentifier: child.orgId,
+        projectIdentifier: child.projectId,
+        renderFullBottomGraph: "true",
+      },
+    });
+    const data = (response as Record<string, unknown>).data ?? response;
+    const execGraph = (data as Record<string, unknown>).executionGraph as Record<string, unknown> | undefined;
+    const nodeMap = execGraph?.nodeMap as Record<string, ExecGraphNode> | undefined;
+    if (nodeMap) return findFailedNodes(nodeMap);
+  } catch (err) {
+    log.warn("Child pipeline diagnosis failed", { executionId: child.executionId, error: String(err) });
+  }
+  return [];
+}
+
 /**
  * Build structured execution summary from the raw API response.
  * Uses layoutNodeMap for stage structure, executionGraph.nodeMap for step-level failure detail.
@@ -246,7 +292,7 @@ function buildExecutionSummary(
   execution: Record<string, unknown>,
   config: Config,
   input: Record<string, unknown>,
-): { summary: Record<string, unknown>; failedNodes: FailedNodeDetail[] } {
+): { summary: Record<string, unknown>; failedNodes: FailedNodeDetail[]; childRef?: { executionId: string; orgId: string; projectId: string } } {
   const pes = execution.pipelineExecutionSummary as Record<string, unknown> | undefined;
   if (!pes) return { summary: execution, failedNodes: [] };
 
@@ -301,8 +347,11 @@ function buildExecutionSummary(
 
   // Step-level failure detail from executionGraph.nodeMap (requires renderFullBottomGraph)
   let failedNodes: FailedNodeDetail[] = [];
+  let childRef: { executionId: string; orgId: string; projectId: string } | undefined;
+
   if (nodeMap) {
     failedNodes = findFailedNodes(nodeMap);
+    childRef = findChildPipelineRef(nodeMap);
   }
 
   // Build failure summary — prefer executionGraph detail over layoutNodeMap stage-level info
@@ -350,7 +399,7 @@ function buildExecutionSummary(
     summary.openInHarness = execution.openInHarness;
   }
 
-  return { summary, failedNodes };
+  return { summary, failedNodes, childRef };
 }
 
 /** Keep only the last `n` lines of a string. */
@@ -461,6 +510,36 @@ export function registerDiagnoseTool(server: McpServer, registry: Registry, clie
             const result = buildExecutionSummary(exec, config, input);
             diagnostic.execution = result.summary;
             failedNodes = result.failedNodes;
+
+            // Follow chained (child) pipeline if the failure is in a child execution
+            if (result.childRef) {
+              log.info("Detected chained pipeline failure, diagnosing child", result.childRef);
+              const childFailedNodes = await diagnoseChildPipeline(client, result.childRef);
+              if (childFailedNodes.length > 0) {
+                const childPrimary = childFailedNodes[0];
+                (diagnostic.execution as Record<string, unknown>).child_pipeline = {
+                  execution_id: result.childRef.executionId,
+                  org_id: result.childRef.orgId,
+                  project_id: result.childRef.projectId,
+                  failure: {
+                    stage: childPrimary.stage,
+                    step: childPrimary.step,
+                    error: childPrimary.failure_message,
+                    delegate: childPrimary.delegate,
+                  },
+                  all_failures: childFailedNodes.length > 1
+                    ? childFailedNodes.map((f) => ({
+                        stage: f.stage,
+                        step: f.step,
+                        error: f.failure_message,
+                        delegate: f.delegate,
+                      }))
+                    : undefined,
+                };
+                // Use child's failed nodes for log fetching since those are the real failures
+                failedNodes = childFailedNodes;
+              }
+            }
           } else {
             diagnostic.execution = execution;
             // Still extract failed nodes for log fetching in raw mode
