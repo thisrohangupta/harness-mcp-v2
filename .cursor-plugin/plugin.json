@@ -1,0 +1,25 @@
+{
+  "name": "harness",
+  "version": "0.5.5",
+  "description": "Give AI agents full access to the Harness.io platform — manage pipelines, deployments, feature flags, cloud costs, security, and 119+ resource types through MCP tools and guided skills",
+  "author": {
+    "name": "Harness"
+  },
+  "homepage": "https://github.com/thisrohangupta/harness-mcp-v2",
+  "repository": "https://github.com/thisrohangupta/harness-mcp-v2",
+  "license": "Apache-2.0",
+  "keywords": [
+    "harness",
+    "ci-cd",
+    "devops",
+    "pipelines",
+    "deployments",
+    "feature-flags",
+    "cloud-costs",
+    "security",
+    "gitops",
+    "chaos-engineering",
+    "mcp"
+  ],
+  "logo": "assets/harness-logo.svg"
+}

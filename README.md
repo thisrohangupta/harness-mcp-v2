@@ -14,6 +14,7 @@ This server is built differently:
 - **Full platform coverage.** 25 toolsets spanning CI/CD, GitOps, Feature Flags, Cloud Cost Management, Security Testing, Chaos Engineering, Internal Developer Portal, Software Supply Chain, and more. Not just pipelines — the entire Harness platform.
 - **Multi-project workflows out of the box.** Agents discover organizations and projects dynamically — no hardcoded env vars needed. Ask "show failed executions across all projects" and the agent can navigate the full account hierarchy.
 - **26 prompt templates.** Pre-built prompts for common workflows: build & deploy apps end-to-end, debug failed pipelines, review DORA metrics, triage vulnerabilities, optimize cloud costs, audit access control, plan feature flag rollouts, review pull requests, approve pending pipelines, and more.
+- **26 agent skills (Cursor plugin).** Ships as a Cursor plugin with `SKILL.md` files that teach AI agents multi-step Harness workflows. Skills activate automatically based on context — say "deploy this app" and the agent follows a structured build-and-deploy playbook using the MCP tools. Compatible with any agent that supports the SKILL.md open standard.
 - **Works everywhere.** Stdio transport for local clients (Claude Desktop, Cursor, Windsurf), HTTP transport for remote/shared deployments, Docker and Kubernetes ready.
 - **Zero-config start.** Just provide a Harness API key. Account ID is auto-extracted from PAT tokens, org/project defaults are optional, and toolset filtering lets you expose only what you need.
 - **Extensible by design.** Adding a new Harness resource means adding a declarative data file — no new tool registration, no schema changes, no prompt updates.
@@ -860,6 +861,136 @@ The server exposes 10 MCP tools. Every tool accepts `org_id` and `project_id` as
 | `schema:///template` | Harness template JSON Schema | `application/schema+json` |
 | `schema:///trigger` | Harness trigger JSON Schema | `application/schema+json` |
 
+## Cursor Plugin & Agent Skills
+
+This project ships as a **Cursor plugin** with 26 agent skills — guided multi-step workflows that teach AI agents how to accomplish complex Harness tasks. Skills use the [SKILL.md open standard](https://www.mdskills.ai/specs/skill-md), supported by Cursor, Claude Code, and 25+ other AI agents.
+
+### How It Works
+
+Skills complement the MCP tools. While tools provide low-level API access (`harness_list`, `harness_get`, etc.), skills provide high-level playbooks — structured instructions that guide the agent through multi-step workflows using those tools.
+
+```
+User: "Deploy this app from my repo"
+  → Agent activates the "build-deploy-app" skill
+  → Skill guides the agent through: clone repo → scan for Dockerfile → check connectors →
+    generate CI pipeline → build & push → generate K8s manifests → create CD pipeline → deploy
+  → Agent uses harness_list, harness_create, harness_execute tools as directed by the skill
+```
+
+Skills use a three-phase loading model for token efficiency:
+1. **Discovery** — Agent reads only the name and description (~50 tokens per skill)
+2. **Activation** — When a task matches, the full SKILL.md is loaded
+3. **Execution** — Agent follows the instructions, calling MCP tools as needed
+
+### Install as Cursor Plugin
+
+Add to your Cursor workspace:
+
+```
+cursor plugin add thisrohangupta/harness-mcp-v2
+```
+
+Or manually: copy the `.cursor-plugin/`, `.mcp.json`, and `skills/` directories into your project.
+
+### Skills Reference
+
+#### CI/CD
+
+| Skill | Description |
+|-------|-------------|
+| `build-deploy-app` | End-to-end CI/CD: scan repo, generate Dockerfiles, create CI/CD pipelines, build images, deploy to K8s with auto-retry |
+| `debug-pipeline` | Diagnose failed pipeline executions — root cause analysis, failed step identification, fix suggestions |
+| `create-pipeline` | Generate a new pipeline YAML from natural language requirements |
+| `onboard-service` | Walk through adding a new service with environments and deployment pipelines |
+| `pending-approvals` | Find and act on pipeline executions waiting for approval |
+
+#### DevOps
+
+| Skill | Description |
+|-------|-------------|
+| `setup-gitops` | Guide through GitOps application onboarding — verify agent, cluster, repo, create app |
+| `dora-metrics` | Review DORA metrics with Elite/High/Medium/Low classification and improvements |
+| `chaos-resilience` | Design and run chaos experiments to test service fault tolerance |
+| `feature-flag-rollout` | Plan and execute progressive feature flag rollouts with safety gates |
+| `delegate-health` | Check delegate connectivity, health, token status with troubleshooting |
+| `migrate-to-template` | Extract reusable templates from existing pipelines to reduce duplication |
+| `developer-scorecard` | Review IDP scorecards and identify gaps to improve service maturity |
+
+#### FinOps
+
+| Skill | Description |
+|-------|-------------|
+| `optimize-costs` | Analyze cloud costs, surface recommendations and anomalies by savings potential |
+| `cloud-cost-breakdown` | Deep-dive into costs by service, environment, or cluster with trends |
+| `rightsizing` | Review and prioritize rightsizing recommendations, optionally create tickets |
+| `cost-anomaly` | Investigate cost spikes — root cause, impacted resources, remediation |
+| `commitment-utilization` | Analyze RI and savings plan utilization to find waste |
+
+#### Security
+
+| Skill | Description |
+|-------|-------------|
+| `security-review` | Review security issues across resources, prioritized by severity |
+| `vulnerability-triage` | Triage CVEs across pipelines and artifacts by severity and exploitability |
+| `sbom-compliance` | Audit SBOM for license risks, policy violations, component vulnerabilities |
+| `supply-chain-audit` | End-to-end supply chain security — provenance, chain of custody, compliance |
+| `exemption-review` | Review and batch approve/reject security exemptions |
+| `access-control-audit` | Audit permissions, find over-privileged accounts, enforce least-privilege |
+
+#### Harness Code
+
+| Skill | Description |
+|-------|-------------|
+| `code-review` | Review a PR — analyze diff, commits, checks for bugs, security, performance |
+| `pr-summary` | Auto-generate PR title and description from commit history and diff |
+| `branch-cleanup` | Find and delete stale or merged branches |
+
+### Plugin Structure
+
+```
+.cursor-plugin/
+  plugin.json              # Plugin manifest
+.mcp.json                  # MCP server configuration (Harness MCP)
+skills/
+  build-deploy-app/
+    SKILL.md               # End-to-end build & deploy workflow
+  debug-pipeline/
+    SKILL.md               # Pipeline failure diagnosis
+  create-pipeline/
+    SKILL.md               # Pipeline generation from requirements
+  ...                      # 23 more skill directories
+```
+
+### Using Skills
+
+Skills activate automatically when the agent detects a matching task. You can also invoke them explicitly:
+
+- **Automatic**: "Debug why my pipeline failed" → activates `debug-pipeline`
+- **Automatic**: "What are our cloud costs?" → activates `cloud-cost-breakdown`
+- **Explicit**: `/build-deploy-app` → directly invokes the skill
+
+### Creating Custom Skills
+
+Add a new skill by creating a directory under `skills/` with a `SKILL.md` file:
+
+```markdown
+---
+name: my-custom-skill
+description: What this skill does and when to activate it
+---
+
+# My Custom Skill
+
+## When to Use
+- Describe when this skill should activate
+
+## Instructions
+### Step 1 — ...
+- Use harness_list, harness_get, etc. as needed
+```
+
+The skill will be automatically discovered by Cursor and other compatible agents.
+
 ## Toolset Filtering
 
 By default, all 25 toolsets (and their 119+ resource types) are enabled. Use `HARNESS_TOOLSETS` to expose only the toolsets you need. This reduces the resource types the LLM sees, improving tool selection accuracy.
@@ -1010,6 +1141,15 @@ pnpm inspect
 ### Project Structure
 
 ```
+.cursor-plugin/
+  plugin.json                       # Cursor plugin manifest
+.mcp.json                           # MCP server connection config
+skills/                             # 26 agent skills (SKILL.md files)
+  build-deploy-app/                 # CI/CD: end-to-end build & deploy
+  debug-pipeline/                   # CI/CD: pipeline failure diagnosis
+  create-pipeline/                  # CI/CD: generate pipeline from requirements
+  onboard-service/                  # CI/CD: onboard new service
+  ...                               # 22 more skills (DevOps, FinOps, Security, Code)
 src/
   index.ts                          # Entrypoint, transport setup
   config.ts                         # Env var validation (Zod)

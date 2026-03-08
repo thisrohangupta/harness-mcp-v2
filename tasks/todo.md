@@ -60,3 +60,16 @@
 - [ ] MCP Inspector verification
 - [ ] Real Harness API integration test
 - [ ] README.md
+
+## Phase 6: Cursor Plugin + Agent Skills ✅
+- [x] `.cursor-plugin/plugin.json` — Plugin manifest
+- [x] `.mcp.json` — MCP server connection config
+- [x] 26 SKILL.md files organized by domain:
+  - CI/CD: build-deploy-app, debug-pipeline, create-pipeline, onboard-service, pending-approvals
+  - DevOps: setup-gitops, dora-metrics, chaos-resilience, feature-flag-rollout, delegate-health, migrate-to-template, developer-scorecard
+  - FinOps: optimize-costs, cloud-cost-breakdown, rightsizing, cost-anomaly, commitment-utilization
+  - Security: security-review, vulnerability-triage, sbom-compliance, supply-chain-audit, exemption-review, access-control-audit
+  - Code: code-review, pr-summary, branch-cleanup
+- [x] README updated with plugin/skills documentation
+- [x] package.json updated to include plugin files in npm distribution
+- [x] All 167 tests pass

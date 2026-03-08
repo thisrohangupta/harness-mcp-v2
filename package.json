@@ -8,7 +8,10 @@
     "harness-mcp-v2": "build/index.js"
   },
   "files": [
-    "build/"
+    "build/",
+    ".cursor-plugin/",
+    ".mcp.json",
+    "skills/"
   ],
   "scripts": {
     "build": "tsc",
