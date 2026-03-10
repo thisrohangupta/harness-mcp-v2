@@ -45,7 +45,7 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^5.2.1",
     "yaml": "^2.8.2",
-    "zod": "^3.25.0"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
