@@ -8,9 +8,9 @@
 
 - **Name**: `harness-mcp-server`
 - **Runtime**: TypeScript (Node.js 20+)
-- **SDK**: `@modelcontextprotocol/sdk` (latest v2)
+- **SDK**: `@modelcontextprotocol/sdk` (v1.27+)
 - **Transport**: Stdio (local) + Streamable HTTP (remote)
-- **Schema Validation**: Zod v3
+- **Schema Validation**: Zod v4 (import from `zod/v4`)
 - **Build**: `tsc` with ES2022 target, ESM output
 - **Package Manager**: pnpm
 
