@@ -39,6 +39,9 @@ import { registerPendingApprovalsPrompt } from "./pending-approvals.js";
 // Deployment workflow prompts
 import { registerBuildDeployAppPrompt } from "./build-deploy-app.js";
 
+// Advanced pipeline generation
+import { registerGeneratePipelinePrompt } from "./generate-pipeline.js";
+
 export function registerAllPrompts(server: McpServer): void {
   // Existing prompts
   registerDebugPipelinePrompt(server);
@@ -79,4 +82,7 @@ export function registerAllPrompts(server: McpServer): void {
 
   // Deployment workflows
   registerBuildDeployAppPrompt(server);
+
+  // Advanced pipeline generation
+  registerGeneratePipelinePrompt(server);
 }
