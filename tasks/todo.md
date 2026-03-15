@@ -4,7 +4,7 @@
 - [x] Inspect repository docs and identify the existing Markdown style/conventions
 - [x] Draft a blog post about the Harness MCP redesign and MCP's expanding ecosystem impact
 - [x] Review the copy for factual consistency with the repo and package positioning
-- [ ] Commit and push the draft on the active branch
+- [x] Commit and push the draft on the active branch
 
 ## Phase 1: Foundation ✅
 - [x] Project scaffolding (package.json, tsconfig, pnpm)
