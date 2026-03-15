@@ -1,5 +1,11 @@
 # Harness MCP Server — Task Tracking
 
+## Current Task: MCP ecosystem redesign blog draft
+- [x] Inspect repository docs and identify the existing Markdown style/conventions
+- [x] Draft a blog post about the Harness MCP redesign and MCP's expanding ecosystem impact
+- [x] Review the copy for factual consistency with the repo and package positioning
+- [ ] Commit and push the draft on the active branch
+
 ## Phase 1: Foundation ✅
 - [x] Project scaffolding (package.json, tsconfig, pnpm)
 - [x] Config validation with Zod
@@ -60,3 +66,8 @@
 - [ ] MCP Inspector verification
 - [ ] Real Harness API integration test
 - [ ] README.md
+
+## Review Notes
+- Added `docs/mcp-ecosystem-redesign-blog.md` as a standalone Markdown draft in the repo's existing docs style.
+- Framed the post around the server's redesign from endpoint wrappers to an agent-oriented interface: consolidated tools, registry dispatch, prompts, resources, safety, and transport flexibility.
+- Grounded the messaging in README-documented capabilities such as 11 tools, 122+ resource types, 26 toolsets, 26 prompts, and compatibility with local clients plus MCP gateways.
