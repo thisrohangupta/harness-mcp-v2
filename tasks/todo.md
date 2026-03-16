@@ -60,3 +60,15 @@
 - [ ] MCP Inspector verification
 - [ ] Real Harness API integration test
 - [ ] README.md
+
+## Current Task: Merge PR #86 execution-log fix
+- [x] Cherry-pick the PR commits onto `cursor/http-client-custom-headers-f67b`
+- [x] Run targeted execution-log and typecheck verification
+- [x] Add a short review note for merge decision and results
+
+### Review Notes
+- Merged PR #86 onto `cursor/http-client-custom-headers-f67b` via cherry-pick of commits `1a3f442` and `13c0769`.
+- Verified targeted execution-log coverage after dependency install:
+  - `pnpm vitest run tests/utils/url-parser.test.ts tests/utils/log-prefix.test.ts tests/tools/tool-handlers.test.ts tests/utils/log-resolver.test.ts`
+  - `pnpm tsc --noEmit`
+- Result: 4 test files passed, 91 tests passed, and TypeScript typecheck passed.
