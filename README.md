@@ -427,6 +427,7 @@ The deployment runs 2 replicas with readiness/liveness probes, resource limits, 
 | `LOG_LEVEL` | No | `info` | Log verbosity: `debug`, `info`, `warn`, `error` |
 | `HARNESS_TOOLSETS` | No | *(all)* | Comma-separated list of enabled toolsets (see [Toolset Filtering](#toolset-filtering)) |
 | `HARNESS_READ_ONLY` | No | `false` | Block all mutating operations (create, update, delete, execute). Only list and get are allowed. Useful for shared/demo environments |
+| `HARNESS_FME_BASE_URL` | No | `https://api.split.io` | Base URL for FME (Split.io) API calls. FME resources (`fme_workspace`, `fme_environment`, `fme_feature_flag`) route to this host instead of `HARNESS_BASE_URL` |
 
 ## Tools Reference
 
@@ -886,7 +887,36 @@ Harness pipelines can be stored in three ways:
 | `fme_feature_flag` | x | x | | | | |
 | `feature_flag` | x | x | x | | x | `toggle` |
 
-**FME (Split.io) resources** — `fme_workspace`, `fme_environment`, and `fme_feature_flag` use the Split.io internal API and are scoped by workspace ID rather than org/project. `fme_feature_flag` returns basic flag metadata (name, description, traffic type, tags, rollout status) without requiring an environment. Use `feature_flag` for the Harness CF admin API which supports environment-specific definitions, create, delete, and toggle.
+**FME (Split.io) resources** — `fme_workspace`, `fme_environment`, and `fme_feature_flag` use the Split.io internal API (`https://api.split.io`) and are scoped by workspace ID rather than org/project. These resources route to a separate base URL from the rest of the Harness platform — set `HARNESS_FME_BASE_URL` to override it if needed.
+
+- `fme_feature_flag` returns basic flag metadata (name, description, traffic type, tags, rollout status) without requiring an environment.
+- Use `feature_flag` for the Harness CF admin API which supports environment-specific definitions, create, delete, and toggle.
+
+**List FME workspaces:**
+
+```json
+harness_list(resource_type="fme_workspace")
+```
+
+**List feature flags in a workspace:**
+
+```json
+harness_list(resource_type="fme_feature_flag", filters={"workspace_id": "<workspace-uuid>"})
+```
+
+**Get a specific flag's metadata:**
+
+```json
+harness_get(resource_type="fme_feature_flag", resource_id="my-flag-name", filters={"workspace_id": "<workspace-uuid>"})
+```
+
+**List FME environments:**
+
+```json
+harness_list(resource_type="fme_environment")
+```
+
+> **Note:** FME flags are visible in the Harness UI at `https://app.harness.io/ng/account/{accountId}/all/fme/...`, but the underlying API is served by `api.split.io`. The MCP handles this routing automatically.
 
 ### GitOps
 
@@ -1356,6 +1386,7 @@ The Harness MCP server pairs well with **[Harness Skills](https://github.com/thi
 | `Missing required field "... for path parameter ..."` | A project/org scoped call is missing identifiers | Set `HARNESS_DEFAULT_ORG_ID`/`HARNESS_DEFAULT_PROJECT_ID` or pass `org_id`/`project_id` per tool call |
 | `Read-only mode is enabled ... operations are not allowed` | `HARNESS_READ_ONLY=true` blocks create/update/delete/execute | Set `HARNESS_READ_ONLY=false` if write operations are intended |
 | Pipeline run fails pre-flight with unresolved required inputs | Provided `inputs` did not cover required runtime placeholders | Fetch `runtime_input_template`, supply missing simple keys, or use `input_set_ids` for structural inputs |
+| FME feature flag list/get returns HTTP 404 | FME resources require `api.split.io`, not `app.harness.io` | Upgrade to v0.6.6+ (routes FME automatically). If using a custom Split.io endpoint, set `HARNESS_FME_BASE_URL` |
 | `Operation declined by user` | User declined the elicitation confirmation dialog | The user chose not to proceed — verify the operation details and retry if intended |
 | `body.template_yaml (or body.yaml) is required` for template create/update | Template APIs expect full YAML payload | Provide full `template_yaml` string in `body`; for deletes, pass `version_label` to delete one version (omit to delete all versions) |
 
