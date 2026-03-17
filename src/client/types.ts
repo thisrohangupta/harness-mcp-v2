@@ -49,4 +49,6 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Override default timeout for this request (milliseconds). */
   timeoutMs?: number;
+  /** Override the default base URL for this request (e.g. "https://api.split.io" for FME). */
+  baseUrl?: string;
 }

@@ -128,6 +128,11 @@ export interface ResourceDefinition {
   listFilterFields?: FilterFieldSpec[];
   /** Harness UI deep-link URL template */
   deepLinkTemplate?: string;
+  /**
+   * Override the default Harness base URL for all operations on this resource.
+   * Used when the underlying API lives on a different host (e.g. "https://api.split.io" for FME).
+   */
+  baseUrl?: string;
   /** Troubleshooting guidance for LLMs. Describes how to diagnose issues with this resource type. */
   diagnosticHint?: string;
   /** Execution guidance for LLMs. Describes how to discover and provide runtime inputs. */

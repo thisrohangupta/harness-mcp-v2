@@ -81,6 +81,10 @@ export class Registry {
 
     for (const toolset of this.toolsets) {
       for (const resource of toolset.resources) {
+        // Allow env var override for FME resources that target an external API
+        if (resource.baseUrl) {
+          resource.baseUrl = config.HARNESS_FME_BASE_URL;
+        }
         this.resourceMap.set(resource.resourceType, resource);
       }
     }
@@ -286,13 +290,14 @@ export class Registry {
       }
     }
 
-    // Make request
+    // Make request — pass base URL override when the resource targets an external API
     const raw = await client.request({
       method: spec.method,
       path,
       params,
       body,
       ...(spec.headers ? { headers: spec.headers } : {}),
+      ...(def.baseUrl ? { baseUrl: def.baseUrl } : {}),
       signal,
     });
 

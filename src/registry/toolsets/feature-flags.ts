@@ -31,6 +31,7 @@ export const featureFlagsToolset: ToolsetDefinition = {
       description: "Feature Management workspace. Supports list with pagination (offset/size, default 20, max 1000).",
       toolset: "feature-flags",
       scope: "project",
+      baseUrl: "https://api.split.io",
       identifierFields: ["workspace_id"],
       listFilterFields: [
         { name: "offset", description: "Pagination offset for feature flag workspaces", type: "number" },
@@ -54,6 +55,7 @@ export const featureFlagsToolset: ToolsetDefinition = {
       description: "Feature Management environment. Supports list.",
       toolset: "feature-flags",
       scope: "project",
+      baseUrl: "https://api.split.io",
       identifierFields: ["environment_id"],
       operations: {
         list: {
@@ -71,6 +73,7 @@ export const featureFlagsToolset: ToolsetDefinition = {
         "Feature flag via the Split.io API. List flags by workspace with pagination (offset/size, default 20, max 50), or get a single flag's metadata. Does not require an environment.",
       toolset: "feature-flags",
       scope: "account",
+      baseUrl: "https://api.split.io",
       identifierFields: ["workspace_id", "feature_flag_name"],
       listFilterFields: [
         { name: "offset", description: "Pagination offset for FME feature flags", type: "number" },

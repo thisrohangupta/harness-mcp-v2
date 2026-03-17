@@ -138,6 +138,22 @@ describe("ConfigSchema", () => {
       expect(result.data.HARNESS_TOOLSETS).toBeUndefined();
     }
   });
+
+  it("applies default HARNESS_FME_BASE_URL", () => {
+    const result = ConfigSchema.safeParse(validConfig);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.HARNESS_FME_BASE_URL).toBe("https://api.split.io");
+    }
+  });
+
+  it("accepts custom HARNESS_FME_BASE_URL", () => {
+    const result = ConfigSchema.safeParse({ ...validConfig, HARNESS_FME_BASE_URL: "https://custom-split.example.com" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.HARNESS_FME_BASE_URL).toBe("https://custom-split.example.com");
+    }
+  });
 });
 
 describe("loadConfig — account ID extraction", () => {
