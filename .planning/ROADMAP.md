@@ -59,8 +59,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 02-01-PLAN.md — Create tool-metrics.ts with metric definitions (counter, histogram, execute counter) and withMetrics HOF
-- [ ] 02-02-PLAN.md — Wire withMetrics into registerAllTools to instrument all 11 tools automatically
+- [x] 02-01-PLAN.md — Create tool-metrics.ts with metric definitions (counter, histogram, execute counter) and withMetrics HOF
+- [x] 02-02-PLAN.md — Wire withMetrics into registerAllTools to instrument all 11 tools automatically
 
 ---
 
@@ -80,7 +80,11 @@ Plans:
 5. Request payload sizes are tracked in `mcp_request_size_bytes` histogram
 6. Response payload sizes are tracked in `mcp_response_size_bytes` histogram
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Create session-metrics.ts and transport-metrics.ts with metric definitions, middleware factory, and unit tests
+- [ ] 03-02-PLAN.md — Wire session and transport metrics into src/index.ts startHttp() lifecycle
 
 ---
 
@@ -90,7 +94,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Metrics Infrastructure | 2/2 | Complete | 2026-03-18 |
 | 2. Tool Instrumentation | 2/2 | Complete    | 2026-03-18 |
-| 3. Session & Transport Metrics | 0/? | Not started | - |
+| 3. Session & Transport Metrics | 0/2 | Planned | - |
 
 ---
 
@@ -134,3 +138,4 @@ Phase 3: Session & Transport Metrics
 *Roadmap created: 2026-03-19*
 *Phase 1 planned: 2026-03-19*
 *Phase 2 planned: 2026-03-19*
+*Phase 3 planned: 2026-03-19*
