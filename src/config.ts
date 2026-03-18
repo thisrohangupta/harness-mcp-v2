@@ -30,6 +30,9 @@ const RawConfigSchema = z.object({
   HARNESS_MAX_BODY_SIZE_MB: z.coerce.number().default(10),
   HARNESS_RATE_LIMIT_RPS: z.coerce.number().default(10),
   HARNESS_READ_ONLY: z.coerce.boolean().default(false),
+  // Metrics configuration
+  HARNESS_METRICS_PORT: z.coerce.number().min(1024).max(65535).default(9090),
+  HARNESS_METRICS_ENABLED: z.coerce.boolean().default(true),
   HARNESS_ALLOW_HTTP: z.coerce.boolean().default(false),
   HARNESS_FME_BASE_URL: z.string().url().default("https://api.split.io"),
   // JWT authentication (optional — enables Bearer token auth in HTTP mode)
