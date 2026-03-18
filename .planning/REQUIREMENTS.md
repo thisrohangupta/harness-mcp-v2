@@ -8,10 +8,10 @@
 ### Metrics Infrastructure
 
 - [ ] **INFRA-01**: Dedicated metrics HTTP server runs on a separate configurable port (default 9090)
-- [ ] **INFRA-02**: Metrics port is configurable via `HARNESS_METRICS_PORT` env var
-- [ ] **INFRA-03**: Metrics server can be enabled/disabled via `HARNESS_METRICS_ENABLED` env var
+- [x] **INFRA-02**: Metrics port is configurable via `HARNESS_METRICS_PORT` env var
+- [x] **INFRA-03**: Metrics server can be enabled/disabled via `HARNESS_METRICS_ENABLED` env var
 - [ ] **INFRA-04**: `/metrics` endpoint serves Prometheus text exposition format
-- [ ] **INFRA-05**: Custom prom-client Registry instance (isolated from global registry)
+- [x] **INFRA-05**: Custom prom-client Registry instance (isolated from global registry)
 - [ ] **INFRA-06**: Health check endpoint on metrics server (`/healthz` returns 200)
 - [ ] **INFRA-07**: Metrics server shuts down gracefully when main server stops
 
@@ -63,10 +63,10 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Pending |
-| INFRA-05 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Pending |
 | INFRA-07 | Phase 1 | Pending |
 | TOOL-01 | Phase 2 | Pending |
