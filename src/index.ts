@@ -16,6 +16,9 @@ import { registerAllResources } from "./resources/index.js";
 import { registerAllPrompts } from "./prompts/index.js";
 import type { AuthContext } from "./auth/principal.js";
 import { parseArgs } from "./utils/cli.js";
+import { createMetricsServer, type MetricsServer } from "./metrics/server.js";
+import { sessionConnected, sessionDisconnected } from "./metrics/session-metrics.js";
+import { createHttpMetricsMiddleware } from "./metrics/transport-metrics.js";
 
 const log = createLogger("main");
 
@@ -97,8 +100,27 @@ const REAP_INTERVAL_MS = 60_000;    // check every minute
  * when bound to localhost (validates Host header against allowed hostnames).
  */
 async function startHttp(config: Config, port: number): Promise<void> {
+  // Start metrics server first (if enabled) — must be available before MCP traffic
+  let metricsServer: MetricsServer | undefined;
+  if (config.HARNESS_METRICS_ENABLED) {
+    try {
+      metricsServer = await createMetricsServer(config.HARNESS_METRICS_PORT);
+    } catch (err) {
+      log.error("Failed to start metrics server — exiting", {
+        port: config.HARNESS_METRICS_PORT,
+        error: String(err),
+      });
+      process.exit(1);
+    }
+  }
+
   const host = process.env.HOST || "127.0.0.1";
   const app = createMcpExpressApp({ host });
+
+  // HTTP transport metrics middleware — must run FIRST to capture raw timing
+  if (config.HARNESS_METRICS_ENABLED) {
+    app.use(createHttpMetricsMiddleware());
+  }
 
   const maxBodySize = config.HARNESS_MAX_BODY_SIZE_MB * 1024 * 1024;
   const { json } = await import("express");
@@ -167,6 +189,7 @@ async function startHttp(config: Config, port: number): Promise<void> {
     const session = sessions.get(sessionId);
     if (!session) return;
     sessions.delete(sessionId);
+    sessionDisconnected();
     session.transport.close().catch(() => {});
     session.server.close().catch(() => {});
     log.info("Session destroyed", { sessionId, remaining: sessions.size });
@@ -245,6 +268,7 @@ async function startHttp(config: Config, port: number): Promise<void> {
             lastActivity: Date.now(),
             authContext,
           });
+          sessionConnected();
           log.info("Session created", {
             sessionId: id,
             authMode: authContext?.authMode,
@@ -378,6 +402,13 @@ async function startHttp(config: Config, port: number): Promise<void> {
     clearInterval(reaper);
     for (const [id] of sessions) {
       destroySession(id);
+    }
+
+    // Close metrics server last — allows final scrape during drain
+    if (metricsServer) {
+      metricsServer.close().then(() => {
+        log.info("Metrics server closed");
+      }).catch(() => {});
     }
 
     // 4. Allow in-flight responses to flush, then exit

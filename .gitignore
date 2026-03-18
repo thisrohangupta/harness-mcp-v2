@@ -16,3 +16,6 @@ pipelines/
 index (1).json
 index (2).yaml
 stderr.log
+
+#gsd plugin
+.planning/**
