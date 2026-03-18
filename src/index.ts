@@ -14,6 +14,7 @@ import { Registry } from "./registry/index.js";
 import { registerAllTools } from "./tools/index.js";
 import { registerAllResources } from "./resources/index.js";
 import { registerAllPrompts } from "./prompts/index.js";
+import type { AuthContext } from "./auth/principal.js";
 import { parseArgs } from "./utils/cli.js";
 
 const log = createLogger("main");
@@ -21,9 +22,18 @@ const log = createLogger("main");
 /**
  * Create a fully-configured MCP server instance with all tools, resources, and prompts.
  */
-function createHarnessServer(config: Config): McpServer {
-  const client = new HarnessClient(config);
-  const registry = new Registry(config);
+function createHarnessServer(config: Config, authContext?: AuthContext): McpServer {
+  // In JWT-only mode, override placeholder account ID with real one from authContext
+  let effectiveConfig = config;
+  if (authContext && authContext.accountId && authContext.accountId !== "jwt-mode") {
+    effectiveConfig = {
+      ...config,
+      HARNESS_ACCOUNT_ID: authContext.accountId,
+    };
+  }
+
+  const client = new HarnessClient(effectiveConfig);
+  const registry = new Registry(effectiveConfig);
 
   const server = new McpServer(
     {
@@ -35,8 +45,8 @@ function createHarnessServer(config: Config): McpServer {
     { capabilities: { logging: {} } },
   );
 
-  registerAllTools(server, registry, client, config);
-  registerAllResources(server, registry, client, config);
+  registerAllTools(server, registry, client, effectiveConfig);
+  registerAllResources(server, registry, client, effectiveConfig);
   registerAllPrompts(server);
 
   return server;
@@ -221,7 +231,9 @@ async function startHttp(config: Config, port: number): Promise<void> {
     let server: McpServer | undefined;
     let transport: StreamableHTTPServerTransport | undefined;
     try {
-      server = createHarnessServer(config);
+      // Pass authContext to server so it can use real account ID from JWT (if present)
+      const authContext = req.authContext;  // Attached by JWT middleware (if enabled)
+      server = createHarnessServer(config, authContext);
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {

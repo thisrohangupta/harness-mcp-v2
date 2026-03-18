@@ -72,11 +72,19 @@ describe("ConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("fails when both HARNESS_API_KEY and JWT_SECRET are empty", () => {
-    const result = ConfigSchema.safeParse({ HARNESS_API_KEY: "", JWT_SECRET: "", HARNESS_ACCOUNT_ID: "acct" });
+  it("fails when both HARNESS_API_KEY and JWT_SECRET are missing", () => {
+    const result = ConfigSchema.safeParse({ HARNESS_ACCOUNT_ID: "acct" });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toContain("Either JWT_SECRET or HARNESS_API_KEY");
+    }
+  });
+
+  it("fails when JWT_SECRET is empty string", () => {
+    const result = ConfigSchema.safeParse({ JWT_SECRET: "", HARNESS_ACCOUNT_ID: "acct" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toContain("expected string to have >=1 characters");
     }
   });
 
