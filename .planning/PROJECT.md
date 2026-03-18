@@ -17,12 +17,13 @@ Operators can monitor MCP server health and tool usage in production via standar
 - [x] Module resolution derived from toolset registry (tool name → module mapping) — Validated in Phase 2: Tool Instrumentation
 - [x] Dedicated metrics server on configurable port (`HARNESS_METRICS_PORT`, default 9090) — Validated in Phase 1: Metrics Infrastructure
 - [x] `/metrics` endpoint serving Prometheus text format — Validated in Phase 1: Metrics Infrastructure
+- [x] `mcp_active_sessions` gauge tracking current SSE/streamable HTTP connections — Validated in Phase 3: Session & Transport Metrics
+- [x] `mcp_request_size_bytes` / `mcp_response_size_bytes` histograms — Validated in Phase 3: Session & Transport Metrics
+- [x] `http_request_duration_seconds` and `http_requests_total` for transport layer — Validated in Phase 3: Session & Transport Metrics
 
 ### Active
 
-- [ ] `mcp_active_sessions` gauge tracking current SSE/streamable HTTP connections
-- [ ] `mcp_request_size_bytes` / `mcp_response_size_bytes` histograms
-- [ ] Standard `http_request_duration_seconds` and `http_requests_total` for transport layer
+*(All v1 requirements now validated — see Validated section)*
 
 ### Out of Scope
 
@@ -56,4 +57,4 @@ Operators can monitor MCP server health and tool usage in production via standar
 | Configurable via HARNESS_METRICS_PORT | Flexibility for different deployment environments | ✓ Implemented (Phase 1) |
 
 ---
-*Last updated: 2026-03-19 after Phase 2 (Tool Instrumentation) complete*
+*Last updated: 2026-03-19 after Phase 3 (Session & Transport Metrics) complete — v1 milestone done*
