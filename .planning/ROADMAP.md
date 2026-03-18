@@ -32,11 +32,11 @@
 5. `GET /healthz` endpoint returns 200 OK when metrics server is healthy
 6. Metrics server shuts down gracefully when main MCP server stops
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
-- [ ] 01-01-PLAN.md — Install prom-client, extend config with metrics fields, create custom registry with build_info gauge
-- [ ] 01-02-PLAN.md — Create metrics Express server (/metrics, /healthz, 404) and integrate lifecycle into main entrypoint
+- [x] 01-01-PLAN.md — Install prom-client, extend config with metrics fields, create custom registry with build_info gauge
+- [x] 01-02-PLAN.md — Create metrics Express server (/metrics, /healthz, 404) and integrate lifecycle into main entrypoint
 
 ---
 
@@ -84,7 +84,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Metrics Infrastructure | 1/2 | In Progress|  |
+| 1. Metrics Infrastructure | 2/2 | Complete | 2026-03-18 |
 | 2. Tool Instrumentation | 0/? | Not started | - |
 | 3. Session & Transport Metrics | 0/? | Not started | - |
 

@@ -7,13 +7,13 @@
 
 ### Metrics Infrastructure
 
-- [ ] **INFRA-01**: Dedicated metrics HTTP server runs on a separate configurable port (default 9090)
+- [x] **INFRA-01**: Dedicated metrics HTTP server runs on a separate configurable port (default 9090)
 - [x] **INFRA-02**: Metrics port is configurable via `HARNESS_METRICS_PORT` env var
 - [x] **INFRA-03**: Metrics server can be enabled/disabled via `HARNESS_METRICS_ENABLED` env var
-- [ ] **INFRA-04**: `/metrics` endpoint serves Prometheus text exposition format
+- [x] **INFRA-04**: `/metrics` endpoint serves Prometheus text exposition format
 - [x] **INFRA-05**: Custom prom-client Registry instance (isolated from global registry)
-- [ ] **INFRA-06**: Health check endpoint on metrics server (`/healthz` returns 200)
-- [ ] **INFRA-07**: Metrics server shuts down gracefully when main server stops
+- [x] **INFRA-06**: Health check endpoint on metrics server (`/healthz` returns 200)
+- [x] **INFRA-07**: Metrics server shuts down gracefully when main server stops
 
 ### Tool Call Metrics
 

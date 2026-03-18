@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: 01
-current_plan: 1
-status: unknown
-last_updated: "2026-03-18T21:35:12.723Z"
+current_plan: 2
+status: executing
+last_updated: "2026-03-18T21:40:16Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: Harness MCP Server — Prometheus Metrics
@@ -32,7 +32,7 @@ progress:
 ## Current Position
 
 Phase: 01 (metrics-infrastructure) — EXECUTING
-Plan: 1 of 2
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -72,7 +72,10 @@ Plan: 1 of 2
 | 2026-03-19 | Use prom-client library | De facto standard for Node.js Prometheus metrics | Phase 1-3 implementation |
 | 2026-03-19 | 3-phase roadmap (coarse granularity) | Requirements cluster naturally into infrastructure → tools → transport | Roadmap structure |
 | 2026-03-19 | Defer runtime metrics (v2) | Not in current requirements, optional diagnostics | Scope control |
-| Phase 01 P01 | 191 | 2 tasks | 5 files |
+| 2026-03-18 | Start metrics server BEFORE MCP transport in HTTP mode | Ensures metrics endpoint available for scraping before MCP traffic begins | Phase 1 lifecycle |
+| 2026-03-18 | Fail hard (process.exit(1)) if metrics port binding fails | Operators need to notice misconfiguration immediately | Production reliability |
+| 2026-03-18 | Close metrics server AFTER MCP sessions drain on shutdown | Allows final scrape during graceful shutdown to capture shutdown metrics | No data loss during rolling restarts |
+| 2026-03-18 | No middleware on metrics Express app | Minimize overhead, no CORS/auth needed for internal scraping endpoint | Lightest possible metrics server footprint |
 
 ### Active Todos
 
