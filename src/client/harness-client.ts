@@ -33,7 +33,7 @@ function humanizeHttpError(status: number, rawBody: string): string {
 
 export class HarnessClient {
   private readonly baseUrl: string;
-  private readonly token: string;
+  private readonly token?: string;  // Optional — may be undefined in JWT-only mode
   private readonly accountId: string;
   private readonly timeout: number;
   private readonly maxRetries: number;
@@ -62,10 +62,14 @@ export class HarnessClient {
     const method = options.method ?? "GET";
     const url = this.buildUrl(options);
     const headers: Record<string, string> = {
-      "x-api-key": this.token,
       "Harness-Account": this.accountId,
       ...options.headers,
     };
+
+    // Only inject x-api-key if token is present (JWT-only mode doesn't use API key)
+    if (this.token) {
+      headers["x-api-key"] = this.token;
+    }
 
     if (options.body) {
       if (typeof options.body === "string") {
@@ -200,10 +204,14 @@ export class HarnessClient {
     const method = options.method ?? "POST";
     const url = this.buildUrl(options);
     const headers: Record<string, string> = {
-      "x-api-key": this.token,
       "Harness-Account": this.accountId,
       ...options.headers,
     };
+
+    // Only inject x-api-key if token is present (JWT-only mode doesn't use API key)
+    if (this.token) {
+      headers["x-api-key"] = this.token;
+    }
 
     if (options.body) {
       if (typeof options.body === "string") {

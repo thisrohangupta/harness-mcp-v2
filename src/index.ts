@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import "dotenv/config";
+
 import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -68,6 +70,7 @@ interface Session {
   server: McpServer;
   transport: StreamableHTTPServerTransport;
   lastActivity: number;
+  authContext?: import("./auth/index.js").AuthContext;
 }
 
 const SESSION_TTL_MS = 30 * 60_000; // 30 minutes
@@ -90,11 +93,32 @@ async function startHttp(config: Config, port: number): Promise<void> {
   const { json } = await import("express");
   app.use(json({ limit: maxBodySize }));
 
+  // JWT authentication middleware (if JWT_SECRET is configured)
+  if (config.JWT_SECRET) {
+    const { JwtValidator, createJwtAuthMiddleware } = await import("./auth/index.js");
+    const validator = new JwtValidator(
+      config.JWT_SECRET,
+      config.JWT_ISSUER,
+      config.JWT_AUDIENCE,
+    );
+    const jwtMiddleware = createJwtAuthMiddleware(
+      validator,
+      !!config.HARNESS_API_KEY,  // Allow API key fallback if HARNESS_API_KEY is set
+      config.HARNESS_ACCOUNT_ID,
+    );
+    app.use(jwtMiddleware);
+    log.info("JWT authentication enabled", {
+      issuer: config.JWT_ISSUER,
+      audience: config.JWT_AUDIENCE,
+      fallback: !!config.HARNESS_API_KEY,
+    });
+  }
+
   // CORS — allow GET, POST, DELETE for session-based MCP
   app.use((_req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", `http://${host}:${port}`);
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, mcp-session-id");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, mcp-session-id, Authorization, x-api-key");
     res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
     next();
   });
@@ -200,8 +224,20 @@ async function startHttp(config: Config, port: number): Promise<void> {
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
-          sessions.set(id, { server: server!, transport: transport!, lastActivity: Date.now() });
-          log.info("Session created", { sessionId: id, total: sessions.size });
+          const authContext = req.authContext;  // Attached by JWT middleware (if enabled)
+          sessions.set(id, {
+            server: server!,
+            transport: transport!,
+            lastActivity: Date.now(),
+            authContext,
+          });
+          log.info("Session created", {
+            sessionId: id,
+            authMode: authContext?.authMode,
+            principal: authContext?.principal?.email,
+            accountId: authContext?.accountId,
+            total: sessions.size,
+          });
         },
       });
 
@@ -370,6 +406,7 @@ async function main(): Promise<void> {
 
   const config = loadConfig();
   setLogLevel(config.LOG_LEVEL);
+  log.info(".env file loaded successfully");
 
   const { transport, port } = parseArgs();
 
