@@ -12,18 +12,17 @@ Operators can monitor MCP server health and tool usage in production via standar
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] `mcp_tool_calls_total` counter with `{tool, resource_type, module, outcome}` labels — Validated in Phase 2: Tool Instrumentation
+- [x] `mcp_tool_call_duration_seconds` histogram with `{tool, resource_type, module}` labels (p50/p95/p99) — Validated in Phase 2: Tool Instrumentation
+- [x] Module resolution derived from toolset registry (tool name → module mapping) — Validated in Phase 2: Tool Instrumentation
+- [x] Dedicated metrics server on configurable port (`HARNESS_METRICS_PORT`, default 9090) — Validated in Phase 1: Metrics Infrastructure
+- [x] `/metrics` endpoint serving Prometheus text format — Validated in Phase 1: Metrics Infrastructure
 
 ### Active
 
-- [ ] `mcp_tool_calls_total` counter with `{tool, module, outcome}` labels (matching Go server)
-- [ ] `mcp_tool_call_duration_seconds` histogram with `{tool, module}` labels (p50/p95/p99)
 - [ ] `mcp_active_sessions` gauge tracking current SSE/streamable HTTP connections
 - [ ] `mcp_request_size_bytes` / `mcp_response_size_bytes` histograms
 - [ ] Standard `http_request_duration_seconds` and `http_requests_total` for transport layer
-- [ ] Module resolution derived from toolset registry (tool name → module mapping)
-- [ ] Dedicated metrics server on configurable port (`HARNESS_METRICS_PORT`, default 9090)
-- [ ] `/metrics` endpoint serving Prometheus text format
 
 ### Out of Scope
 
@@ -51,10 +50,10 @@ Operators can monitor MCP server health and tool usage in production via standar
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Separate metrics port (not same HTTP server) | Isolates scraping from MCP protocol traffic; standard practice for sidecar monitoring | — Pending |
-| Derive module from toolset registry | Matches Go server pattern; avoids brittle static mapping | — Pending |
-| Use prom-client library | De facto standard for Node.js Prometheus metrics | — Pending |
-| Configurable via HARNESS_METRICS_PORT | Flexibility for different deployment environments | — Pending |
+| Separate metrics port (not same HTTP server) | Isolates scraping from MCP protocol traffic; standard practice for sidecar monitoring | ✓ Implemented (Phase 1) |
+| Derive module from toolset registry | Matches Go server pattern; avoids brittle static mapping | ✓ Implemented (Phase 2) |
+| Use prom-client library | De facto standard for Node.js Prometheus metrics | ✓ Implemented (Phase 1) |
+| Configurable via HARNESS_METRICS_PORT | Flexibility for different deployment environments | ✓ Implemented (Phase 1) |
 
 ---
-*Last updated: 2026-03-19 after initialization*
+*Last updated: 2026-03-19 after Phase 2 (Tool Instrumentation) complete*
