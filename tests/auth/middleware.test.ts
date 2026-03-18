@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import { JwtValidator, createJwtAuthMiddleware } from "../../src/auth/index.js";
+import { generateTestToken } from "./test-utils.js";
 
 describe("JWT Auth Middleware", () => {
   const secret = "test-secret-minimum-32-characters-long-for-hmac";
@@ -38,7 +39,7 @@ describe("JWT Auth Middleware", () => {
 
   describe("JWT authentication", () => {
     it("should accept valid Bearer token", () => {
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -76,7 +77,8 @@ describe("JWT Auth Middleware", () => {
     });
 
     it("should reject expired Bearer token", () => {
-      const token = validator.generate(
+      const token = generateTestToken(
+        secret,
         {
           type: "USER",
           name: "Test User",
@@ -104,7 +106,7 @@ describe("JWT Auth Middleware", () => {
     });
 
     it("should handle missing Bearer prefix", () => {
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -174,7 +176,7 @@ describe("JWT Auth Middleware", () => {
 
   describe("Validator configuration errors", () => {
     it("should return 500 if JWT auth requested but validator not configured", () => {
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",

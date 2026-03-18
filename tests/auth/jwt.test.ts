@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { JwtValidator } from "../../src/auth/jwt.js";
+import { generateTestToken } from "./test-utils.js";
 
 describe("JwtValidator", () => {
   const secret = "test-secret-minimum-32-characters-long-for-hmac";
@@ -7,7 +8,7 @@ describe("JwtValidator", () => {
   describe("validate()", () => {
     it("should validate a valid JWT token", () => {
       const validator = new JwtValidator(secret);
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -30,7 +31,8 @@ describe("JwtValidator", () => {
 
     it("should reject expired token", () => {
       const validator = new JwtValidator(secret);
-      const token = validator.generate(
+      const token = generateTestToken(
+        secret,
         {
           type: "USER",
           name: "Test User",
@@ -49,7 +51,7 @@ describe("JwtValidator", () => {
       const validator1 = new JwtValidator(secret);
       const validator2 = new JwtValidator("wrong-secret-minimum-32-characters");
 
-      const token = validator1.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -63,7 +65,7 @@ describe("JwtValidator", () => {
 
     it("should reject token with missing accountId claim", () => {
       const validator = new JwtValidator(secret);
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -78,7 +80,7 @@ describe("JwtValidator", () => {
     it("should reject token with invalid type claim", () => {
       const validator = new JwtValidator(secret);
       // Generate token with valid type, then manually validate with modified claims
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER" as "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -95,7 +97,7 @@ describe("JwtValidator", () => {
 
     it("should reject token with missing name claim", () => {
       const validator = new JwtValidator(secret);
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "", // Empty name
         email: "test@harness.io",
@@ -109,7 +111,7 @@ describe("JwtValidator", () => {
 
     it("should validate issuer if configured", () => {
       const validator = new JwtValidator(secret, "https://app.harness.io");
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -124,7 +126,7 @@ describe("JwtValidator", () => {
 
     it("should reject token with wrong issuer", () => {
       const validator = new JwtValidator(secret, "https://app.harness.io");
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -143,7 +145,7 @@ describe("JwtValidator", () => {
 
     it("should validate SERVICE_ACCOUNT type", () => {
       const validator = new JwtValidator(secret);
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "SERVICE_ACCOUNT",
         name: "CI Service",
         email: "ci@harness.io",
@@ -160,7 +162,7 @@ describe("JwtValidator", () => {
   describe("generate()", () => {
     it("should generate a valid token", () => {
       const validator = new JwtValidator(secret);
-      const token = validator.generate({
+      const token = generateTestToken(secret, {
         type: "USER",
         name: "Test User",
         email: "test@harness.io",
@@ -175,7 +177,8 @@ describe("JwtValidator", () => {
 
     it("should generate token with custom expiration", () => {
       const validator = new JwtValidator(secret);
-      const token = validator.generate(
+      const token = generateTestToken(
+        secret,
         {
           type: "USER",
           name: "Test User",

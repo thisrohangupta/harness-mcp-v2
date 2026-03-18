@@ -10,14 +10,16 @@ export class JwtValidator {
   private readonly secret: string;
   private readonly issuer?: string;
   private readonly audience?: string;
+  private readonly algorithm: jwt.Algorithm;
 
-  constructor(secret: string, issuer?: string, audience?: string) {
+  constructor(secret: string, issuer?: string, audience?: string, algorithm: string = "HS256") {
     if (!secret || secret.length < 32) {
       throw new Error("JWT secret must be at least 32 characters long");
     }
     this.secret = secret;
     this.issuer = issuer;
     this.audience = audience;
+    this.algorithm = algorithm as jwt.Algorithm;
   }
 
   /**
@@ -36,7 +38,7 @@ export class JwtValidator {
     try {
       // Verify and decode token
       const decoded = jwt.verify(token, this.secret, {
-        algorithms: ["HS256"], 
+        algorithms: [this.algorithm],
         issuer: this.issuer,
         audience: this.audience,
       }) as JwtClaims;

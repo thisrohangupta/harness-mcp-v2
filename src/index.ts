@@ -100,6 +100,7 @@ async function startHttp(config: Config, port: number): Promise<void> {
       config.JWT_SECRET,
       config.JWT_ISSUER,
       config.JWT_AUDIENCE,
+      config.JWT_ALGORITHM,
     );
     const jwtMiddleware = createJwtAuthMiddleware(
       validator,
