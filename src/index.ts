@@ -16,6 +16,7 @@ import { registerAllResources } from "./resources/index.js";
 import { registerAllPrompts } from "./prompts/index.js";
 import type { AuthContext } from "./auth/principal.js";
 import { parseArgs } from "./utils/cli.js";
+import { createMetricsServer, type MetricsServer } from "./metrics/server.js";
 
 const log = createLogger("main");
 
@@ -97,6 +98,20 @@ const REAP_INTERVAL_MS = 60_000;    // check every minute
  * when bound to localhost (validates Host header against allowed hostnames).
  */
 async function startHttp(config: Config, port: number): Promise<void> {
+  // Start metrics server first (if enabled) — must be available before MCP traffic
+  let metricsServer: MetricsServer | undefined;
+  if (config.HARNESS_METRICS_ENABLED) {
+    try {
+      metricsServer = await createMetricsServer(config.HARNESS_METRICS_PORT);
+    } catch (err) {
+      log.error("Failed to start metrics server — exiting", {
+        port: config.HARNESS_METRICS_PORT,
+        error: String(err),
+      });
+      process.exit(1);
+    }
+  }
+
   const host = process.env.HOST || "127.0.0.1";
   const app = createMcpExpressApp({ host });
 
@@ -378,6 +393,13 @@ async function startHttp(config: Config, port: number): Promise<void> {
     clearInterval(reaper);
     for (const [id] of sessions) {
       destroySession(id);
+    }
+
+    // Close metrics server last — allows final scrape during drain
+    if (metricsServer) {
+      metricsServer.close().then(() => {
+        log.info("Metrics server closed");
+      }).catch(() => {});
     }
 
     // 4. Allow in-flight responses to flush, then exit
