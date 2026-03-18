@@ -7,6 +7,17 @@ import { createLogger } from "../utils/logger.js";
 const log = createLogger("auth");
 
 /**
+ * Mask sensitive token data for logging.
+ * Shows first 20 chars to identify the token, masks the rest.
+ */
+function maskToken(token: string): string {
+  if (token.length <= 20) {
+    return "***";
+  }
+  return `${token.slice(0, 20)}...`;
+}
+
+/**
  * Extend Express Request type to include authContext.
  */
 declare global {
@@ -72,12 +83,17 @@ export function createJwtAuthMiddleware(
           email: principal.email,
           accountId: claims.accountId,
           type: claims.type,
+          token: maskToken(token),
         });
 
         return next();
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
-        log.warn("JWT validation failed", { error: message, ip: req.ip });
+        log.warn("JWT validation failed", {
+          error: message,
+          token: maskToken(token),
+          ip: req.ip,
+        });
 
         res.status(401).json({
           jsonrpc: "2.0",
