@@ -77,6 +77,7 @@ export function createJwtAuthMiddleware(
           principal,
           accountId: claims.accountId,
           authMode: "jwt",
+          authHeader, // Store original "Bearer <token>" for passthrough to Harness API
         };
 
         log.debug("JWT authentication successful", {

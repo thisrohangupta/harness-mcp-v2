@@ -32,7 +32,8 @@ function createHarnessServer(config: Config, authContext?: AuthContext): McpServ
     };
   }
 
-  const client = new HarnessClient(effectiveConfig);
+  // Pass authHeader to client for JWT passthrough to Harness API
+  const client = new HarnessClient(effectiveConfig, authContext?.authHeader);
   const registry = new Registry(effectiveConfig);
 
   const server = new McpServer(

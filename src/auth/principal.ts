@@ -43,6 +43,7 @@ export interface Principal {
 /**
  * Authentication context attached to each HTTP request.
  * Contains user identity (for JWT) or just account ID (for API key).
+ * Used by HarnessClient to set the correct authentication headers.
  */
 export interface AuthContext {
   /** User principal (present only for JWT auth) */
@@ -51,6 +52,8 @@ export interface AuthContext {
   accountId: string;
   /** Authentication mode used */
   authMode: "jwt" | "api_key";
+  /** Original Authorization header (for JWT passthrough to Harness API) */
+  authHeader?: string;
 }
 
 /**

@@ -38,14 +38,16 @@ export class HarnessClient {
   private readonly timeout: number;
   private readonly maxRetries: number;
   private readonly rateLimiter: RateLimiter;
+  private readonly authHeader?: string;  // Authorization header for JWT passthrough
 
-  constructor(config: Config) {
+  constructor(config: Config, authHeader?: string) {
     this.baseUrl = config.HARNESS_BASE_URL.replace(/\/$/, "");
     this.token = config.HARNESS_API_KEY;
     this.accountId = config.HARNESS_ACCOUNT_ID;
     this.timeout = config.HARNESS_API_TIMEOUT_MS;
     this.maxRetries = config.HARNESS_MAX_RETRIES;
     this.rateLimiter = new RateLimiter(config.HARNESS_RATE_LIMIT_RPS);
+    this.authHeader = authHeader;
   }
 
   get account(): string {
@@ -66,8 +68,10 @@ export class HarnessClient {
       ...options.headers,
     };
 
-    // Only inject x-api-key if token is present (JWT-only mode doesn't use API key)
-    if (this.token) {
+    // Inject authentication header — JWT takes precedence over API key
+    if (this.authHeader) {
+      headers["Authorization"] = this.authHeader;
+    } else if (this.token) {
       headers["x-api-key"] = this.token;
     }
 
@@ -208,8 +212,10 @@ export class HarnessClient {
       ...options.headers,
     };
 
-    // Only inject x-api-key if token is present (JWT-only mode doesn't use API key)
-    if (this.token) {
+    // Inject authentication header — JWT takes precedence over API key
+    if (this.authHeader) {
+      headers["Authorization"] = this.authHeader;
+    } else if (this.token) {
       headers["x-api-key"] = this.token;
     }
 
