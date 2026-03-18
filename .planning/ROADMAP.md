@@ -56,7 +56,11 @@ Plans:
 5. Histogram provides p50, p95, p99 latency percentiles via default buckets (0.001 to 5 seconds)
 6. Tool metrics collection adds less than 1ms overhead per tool call
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Create tool-metrics.ts with metric definitions (counter, histogram, execute counter) and withMetrics HOF
+- [ ] 02-02-PLAN.md — Wire withMetrics into registerAllTools to instrument all 11 tools automatically
 
 ---
 
@@ -85,7 +89,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Metrics Infrastructure | 2/2 | Complete | 2026-03-18 |
-| 2. Tool Instrumentation | 0/? | Not started | - |
+| 2. Tool Instrumentation | 0/2 | Planned | - |
 | 3. Session & Transport Metrics | 0/? | Not started | - |
 
 ---
@@ -122,10 +126,11 @@ Phase 3: Session & Transport Metrics
 | Phase | Research Needed? | Reason |
 |-------|------------------|--------|
 | Phase 1 | No | Standard HTTP server pattern, well-documented in prom-client |
-| Phase 2 | Maybe | Module resolution depends on existing tool registry structure — verify before implementing |
+| Phase 2 | No | Module resolution verified during discuss-phase — uses existing getResource() |
 | Phase 3 | No | Session tracking is straightforward, express-prom-bundle is optional and well-documented |
 
 ---
 
 *Roadmap created: 2026-03-19*
 *Phase 1 planned: 2026-03-19*
+*Phase 2 planned: 2026-03-19*
