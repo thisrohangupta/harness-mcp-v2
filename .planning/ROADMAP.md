@@ -9,7 +9,7 @@
 ## Phases
 
 - [ ] **Phase 1: Metrics Infrastructure** - Dedicated metrics server with configuration and health checks
-- [ ] **Phase 2: Tool Instrumentation** - Counter and histogram metrics for MCP tool calls
+- [x] **Phase 2: Tool Instrumentation** - Counter and histogram metrics for MCP tool calls (completed 2026-03-18)
 - [ ] **Phase 3: Session & Transport Metrics** - HTTP session tracking and request/response metrics
 
 ---
@@ -56,7 +56,7 @@ Plans:
 5. Histogram provides p50, p95, p99 latency percentiles via default buckets (0.001 to 5 seconds)
 6. Tool metrics collection adds less than 1ms overhead per tool call
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md — Create tool-metrics.ts with metric definitions (counter, histogram, execute counter) and withMetrics HOF
@@ -89,7 +89,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Metrics Infrastructure | 2/2 | Complete | 2026-03-18 |
-| 2. Tool Instrumentation | 1/2 | In Progress|  |
+| 2. Tool Instrumentation | 2/2 | Complete   | 2026-03-18 |
 | 3. Session & Transport Metrics | 0/? | Not started | - |
 
 ---
