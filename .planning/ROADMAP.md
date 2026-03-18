@@ -56,7 +56,7 @@ Plans:
 5. Histogram provides p50, p95, p99 latency percentiles via default buckets (0.001 to 5 seconds)
 6. Tool metrics collection adds less than 1ms overhead per tool call
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 02-01-PLAN.md — Create tool-metrics.ts with metric definitions (counter, histogram, execute counter) and withMetrics HOF
@@ -89,7 +89,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Metrics Infrastructure | 2/2 | Complete | 2026-03-18 |
-| 2. Tool Instrumentation | 0/2 | Planned | - |
+| 2. Tool Instrumentation | 1/2 | In Progress|  |
 | 3. Session & Transport Metrics | 0/? | Not started | - |
 
 ---

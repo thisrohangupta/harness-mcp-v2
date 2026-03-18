@@ -17,12 +17,12 @@
 
 ### Tool Call Metrics
 
-- [ ] **TOOL-01**: `mcp_tool_calls_total` counter tracks tool invocations with `{tool, module, outcome}` labels
-- [ ] **TOOL-02**: Outcome label classifies as `ok`, `tool_error`, or `error` (matching Go server schema)
-- [ ] **TOOL-03**: `mcp_tool_call_duration_seconds` histogram tracks tool call latency with `{tool, module}` labels
+- [x] **TOOL-01**: `mcp_tool_calls_total` counter tracks tool invocations with `{tool, module, outcome}` labels
+- [x] **TOOL-02**: Outcome label classifies as `ok`, `tool_error`, or `error` (matching Go server schema)
+- [x] **TOOL-03**: `mcp_tool_call_duration_seconds` histogram tracks tool call latency with `{tool, module}` labels
 - [ ] **TOOL-04**: Module label is derived from toolset registry (tool name → toolset → module mapping)
 - [ ] **TOOL-05**: Metrics collection is implemented as middleware wrapper (automatic, no per-tool modification)
-- [ ] **TOOL-06**: Histogram uses sensible default buckets for API latency (e.g., 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5 seconds)
+- [x] **TOOL-06**: Histogram uses sensible default buckets for API latency (e.g., 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5 seconds)
 
 ### Session & Transport Metrics
 
@@ -69,12 +69,12 @@
 | INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Pending |
 | INFRA-07 | Phase 1 | Pending |
-| TOOL-01 | Phase 2 | Pending |
-| TOOL-02 | Phase 2 | Pending |
-| TOOL-03 | Phase 2 | Pending |
+| TOOL-01 | Phase 2 | Complete |
+| TOOL-02 | Phase 2 | Complete |
+| TOOL-03 | Phase 2 | Complete |
 | TOOL-04 | Phase 2 | Pending |
 | TOOL-05 | Phase 2 | Pending |
-| TOOL-06 | Phase 2 | Pending |
+| TOOL-06 | Phase 2 | Complete |
 | SESS-01 | Phase 3 | Pending |
 | SESS-02 | Phase 3 | Pending |
 | HTTP-01 | Phase 3 | Pending |

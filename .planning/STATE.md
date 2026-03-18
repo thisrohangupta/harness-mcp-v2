@@ -2,21 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 2
-current_plan: Not started
+current_phase: 02
+current_plan: 1
 status: unknown
-last_updated: "2026-03-18T21:46:12.594Z"
+last_updated: "2026-03-18T22:22:06.972Z"
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State: Harness MCP Server — Prometheus Metrics
 
-**Last updated:** 2026-03-19
-**Current focus:** Phase 01 — metrics-infrastructure
+**Last updated:** 2026-03-19T22:20:31Z
+**Stopped at:** Completed 02-01-PLAN.md
+**Current focus:** Phase 02 — tool-instrumentation
 
 ---
 
@@ -24,14 +25,14 @@ progress:
 
 **Core Value:** Operators can monitor MCP server health and tool usage in production via standard Prometheus scraping, enabling alerting, dashboards, and SLO tracking
 
-**Current Phase:** 2
-**Current Plan:** Not started
+**Current Phase:** 02
+**Current Plan:** 2
 
 ---
 
 ## Current Position
 
-Phase: 01 (metrics-infrastructure) — EXECUTING
+Phase: 02 (tool-instrumentation) — EXECUTING
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -76,6 +77,9 @@ Plan: 2 of 2
 | 2026-03-18 | Fail hard (process.exit(1)) if metrics port binding fails | Operators need to notice misconfiguration immediately | Production reliability |
 | 2026-03-18 | Close metrics server AFTER MCP sessions drain on shutdown | Allows final scrape during graceful shutdown to capture shutdown metrics | No data loss during rolling restarts |
 | 2026-03-18 | No middleware on metrics Express app | Minimize overhead, no CORS/auth needed for internal scraping endpoint | Lightest possible metrics server footprint |
+| 2026-03-19 | Outcome 'tool_error' covers isError:true AND user-fixable thrown errors | Consistent classification for LLM-actionable errors vs system failures | Phase 02 tool metrics |
+| 2026-03-19 | withMetrics HOF swallows metrics failures in finally block | Instrumentation must never break tool callers | Phase 02 tool metrics |
+| Phase 02-tool-instrumentation P01 | 2min | 1 task | 2 files |
 
 ### Active Todos
 
