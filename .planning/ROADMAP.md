@@ -89,7 +89,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Metrics Infrastructure | 2/2 | Complete | 2026-03-18 |
-| 2. Tool Instrumentation | 2/2 | Complete   | 2026-03-18 |
+| 2. Tool Instrumentation | 2/2 | Complete    | 2026-03-18 |
 | 3. Session & Transport Metrics | 0/? | Not started | - |
 
 ---
