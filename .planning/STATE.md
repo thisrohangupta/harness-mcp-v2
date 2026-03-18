@@ -2,23 +2,23 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 3
-current_plan: Not started
+current_phase: 03
+current_plan: 1
 status: unknown
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-18T22:28:09.721Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-18T22:47:56.624Z"
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State: Harness MCP Server — Prometheus Metrics
 
 **Last updated:** 2026-03-19T22:20:31Z
-**Stopped at:** Completed 02-02-PLAN.md
-**Current focus:** Phase 02 — tool-instrumentation
+**Stopped at:** Completed 03-01-PLAN.md
+**Current focus:** Phase 03 — session-transport-metrics
 
 ---
 
@@ -26,14 +26,14 @@ progress:
 
 **Core Value:** Operators can monitor MCP server health and tool usage in production via standard Prometheus scraping, enabling alerting, dashboards, and SLO tracking
 
-**Current Phase:** 3
-**Current Plan:** Not started
+**Current Phase:** 03
+**Current Plan:** 2
 
 ---
 
 ## Current Position
 
-Phase: 02 (tool-instrumentation) — EXECUTING
+Phase: 03 (session-transport-metrics) — EXECUTING
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -80,8 +80,12 @@ Plan: 2 of 2
 | 2026-03-18 | No middleware on metrics Express app | Minimize overhead, no CORS/auth needed for internal scraping endpoint | Lightest possible metrics server footprint |
 | 2026-03-19 | Outcome 'tool_error' covers isError:true AND user-fixable thrown errors | Consistent classification for LLM-actionable errors vs system failures | Phase 02 tool metrics |
 | 2026-03-19 | withMetrics HOF swallows metrics failures in finally block | Instrumentation must never break tool callers | Phase 02 tool metrics |
+| 2026-03-18 | No HARNESS_METRICS_ENABLED guard on metric definitions | Metric objects always exist; scraping controlled by server lifecycle, not metric existence | Phase 03 session/transport metrics |
+| 2026-03-18 | Size histograms (request/response) are label-free | Prevents cardinality explosion from variable content sizes | Phase 03 transport metrics |
+| 2026-03-18 | HTTP transport timer starts before next() (before body parsing) | Full round-trip latency measurement including body decode time | Phase 03 transport metrics |
 | Phase 02-tool-instrumentation P01 | 2min | 1 task | 2 files |
 | Phase 02-tool-instrumentation P02 | 1 | 1 tasks | 1 files |
+| Phase 03-session-transport-metrics P01 | 2min | 2 tasks | 4 files |
 
 ### Active Todos
 

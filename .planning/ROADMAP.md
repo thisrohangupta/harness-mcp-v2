@@ -80,7 +80,7 @@ Plans:
 5. Request payload sizes are tracked in `mcp_request_size_bytes` histogram
 6. Response payload sizes are tracked in `mcp_response_size_bytes` histogram
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Create session-metrics.ts and transport-metrics.ts with metric definitions, middleware factory, and unit tests
@@ -94,7 +94,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Metrics Infrastructure | 2/2 | Complete | 2026-03-18 |
 | 2. Tool Instrumentation | 2/2 | Complete    | 2026-03-18 |
-| 3. Session & Transport Metrics | 0/2 | Planned | - |
+| 3. Session & Transport Metrics | 1/2 | In Progress|  |
 
 ---
 

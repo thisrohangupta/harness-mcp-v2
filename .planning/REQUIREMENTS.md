@@ -26,12 +26,12 @@
 
 ### Session & Transport Metrics
 
-- [ ] **SESS-01**: `mcp_active_sessions` gauge tracks current SSE/streamable HTTP connections
-- [ ] **SESS-02**: Session gauge increments on connect and decrements on disconnect/close
-- [ ] **HTTP-01**: `http_request_duration_seconds` histogram tracks transport-layer HTTP latency
-- [ ] **HTTP-02**: `http_requests_total` counter tracks HTTP requests by method, path, and status code
-- [ ] **HTTP-03**: `mcp_request_size_bytes` histogram tracks incoming request payload sizes
-- [ ] **HTTP-04**: `mcp_response_size_bytes` histogram tracks outgoing response payload sizes
+- [x] **SESS-01**: `mcp_active_sessions` gauge tracks current SSE/streamable HTTP connections
+- [x] **SESS-02**: Session gauge increments on connect and decrements on disconnect/close
+- [x] **HTTP-01**: `http_request_duration_seconds` histogram tracks transport-layer HTTP latency
+- [x] **HTTP-02**: `http_requests_total` counter tracks HTTP requests by method, path, and status code
+- [x] **HTTP-03**: `mcp_request_size_bytes` histogram tracks incoming request payload sizes
+- [x] **HTTP-04**: `mcp_response_size_bytes` histogram tracks outgoing response payload sizes
 
 ## v2 Requirements
 
@@ -75,12 +75,12 @@
 | TOOL-04 | Phase 2 | Complete |
 | TOOL-05 | Phase 2 | Complete |
 | TOOL-06 | Phase 2 | Complete |
-| SESS-01 | Phase 3 | Pending |
-| SESS-02 | Phase 3 | Pending |
-| HTTP-01 | Phase 3 | Pending |
-| HTTP-02 | Phase 3 | Pending |
-| HTTP-03 | Phase 3 | Pending |
-| HTTP-04 | Phase 3 | Pending |
+| SESS-01 | Phase 3 | Complete |
+| SESS-02 | Phase 3 | Complete |
+| HTTP-01 | Phase 3 | Complete |
+| HTTP-02 | Phase 3 | Complete |
+| HTTP-03 | Phase 3 | Complete |
+| HTTP-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 19 total
