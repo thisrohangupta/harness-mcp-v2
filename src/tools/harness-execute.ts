@@ -8,7 +8,7 @@ import { confirmViaElicitation } from "../utils/elicitation.js";
 import { createLogger, logAudit } from "../utils/logger.js";
 import { applyUrlDefaults } from "../utils/url-parser.js";
 import { asRecord, asString } from "../utils/type-guards.js";
-import { isFlatKeyValueInputs, isResolvableInputs, flattenInputs, resolveRuntimeInputs, type ResolutionResult } from "../utils/runtime-input-resolver.js";
+import { isFlatKeyValueInputs, isResolvableInputs, flattenInputs, resolveRuntimeInputs, fetchRuntimeInputTemplate, expandCodebaseBuildInputs, type ResolutionResult } from "../utils/runtime-input-resolver.js";
 
 const log = createLogger("execute");
 
@@ -24,7 +24,7 @@ export function registerExecuteTool(server: McpServer, registry: Registry, clien
         resource_id: z.string().describe("Primary resource identifier").optional(),
         org_id: z.string().describe("Organization identifier (overrides default)").optional(),
         project_id: z.string().describe("Project identifier (overrides default)").optional(),
-        inputs: z.union([z.string(), z.record(z.string(), z.unknown())]).describe("Pipeline runtime inputs: key-value pairs like {branch: 'main'} (auto-resolved), or full YAML string. Check runtime_input_template first via harness_get.").optional(),
+        inputs: z.union([z.string(), z.record(z.string(), z.unknown())]).describe("Pipeline runtime inputs: key-value pairs (auto-resolved), full YAML string, or nested objects. For CI pipelines with codebase: pass {branch: 'main'}, {tag: 'v1.0'}, {pr_number: '42'}, or {commit_sha: 'abc123'} — the build type is auto-inferred. For variables: {env: 'prod', replicas: '3'}. Check runtime_input_template first via harness_get.").optional(),
         input_set_ids: z.array(z.string()).describe("Input set IDs for complex pipelines. List available: harness_list(resource_type='input_set', filters={pipeline_id: '...'}).").optional(),
         body: z.record(z.string(), z.unknown()).describe("Additional body payload for the action").optional(),
         params: z.record(z.string(), z.unknown()).describe("Action-specific parameters. Call harness_describe for available fields per resource_type.").optional(),
@@ -78,6 +78,41 @@ export function registerExecuteTool(server: McpServer, registry: Registry, clien
         // Auto-resolve flat key-value runtime inputs for pipeline run
         let resolved: ResolutionResult | undefined;
         const hasInputSets = args.input_set_ids && args.input_set_ids.length > 0;
+
+        // Pre-flight: when running a pipeline with no inputs and no input sets,
+        // check if the template requires codebase build inputs and guide the user.
+        if (
+          resourceType === "pipeline" &&
+          args.action === "run" &&
+          !args.inputs &&
+          !hasInputSets
+        ) {
+          const pipelineIdForCheck = asString(input.pipeline_id);
+          if (pipelineIdForCheck) {
+            try {
+              const template = await fetchRuntimeInputTemplate(client, {
+                pipelineId: pipelineIdForCheck,
+                orgId: asString(input.org_id) || registry.defaultOrgId,
+                projectId: asString(input.project_id) || registry.defaultProjectId,
+                branch: asString(input.branch),
+              });
+              if (template && template.includes("codebase") && template.includes("build")) {
+                return errorResult(
+                  "This CI pipeline requires codebase build inputs. Provide one of these in inputs:\n\n" +
+                  "• Branch build: inputs={branch: 'main'}\n" +
+                  "• Tag build: inputs={tag: 'v1.0'}\n" +
+                  "• PR build: inputs={pr_number: '42'}\n" +
+                  "• Commit build: inputs={commit_sha: 'abc123'}\n\n" +
+                  "The build type is auto-inferred from the key you provide. You can combine with other runtime inputs, " +
+                  "e.g. inputs={branch: 'main', env: 'prod'}.\n\n" +
+                  `Use harness_get(resource_type='runtime_input_template', resource_id='${pipelineIdForCheck}') to see all required inputs.`,
+                );
+              }
+            } catch {
+              // Template fetch failed — let execution proceed and let the API return its error
+            }
+          }
+        }
 
         if (
           resourceType === "pipeline" &&
@@ -191,6 +226,27 @@ export function registerExecuteTool(server: McpServer, registry: Registry, clien
         return jsonResult(result);
       } catch (err) {
         logAudit({ operation: "execute", resource_type: args.resource_type ?? "unknown", resource_id: args.resource_id, action: args.action, outcome: "error", error: String(err) });
+
+        // Intercept the common "codebase git task" error with actionable guidance
+        if (
+          err instanceof HarnessApiError &&
+          err.statusCode === 400 &&
+          err.message.toLowerCase().includes("codebase") &&
+          err.message.toLowerCase().includes("git task")
+        ) {
+          const pipelineId = args.resource_id || "PIPELINE_ID";
+          return errorResult(
+            `${err.message}\n\n` +
+            "This pipeline requires codebase build inputs. Retry with one of these in inputs:\n\n" +
+            "• Branch build: inputs={branch: 'main'}\n" +
+            "• Tag build: inputs={tag: 'v1.0'}\n" +
+            "• PR build: inputs={pr_number: '42'}\n" +
+            "• Commit build: inputs={commit_sha: 'abc123'}\n\n" +
+            "The build type is auto-inferred. You can combine with other variables, e.g. inputs={branch: 'main', env: 'prod'}.\n\n" +
+            `Check required inputs: harness_get(resource_type='runtime_input_template', resource_id='${pipelineId}')`,
+          );
+        }
+
         if (isUserError(err)) return errorResult(err.message);
         if (isUserFixableApiError(err)) return errorResult(err.message);
         throw toMcpError(err);
