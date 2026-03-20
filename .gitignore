@@ -1,0 +1,13 @@
+node_modules/
+build/
+.env
+*.tgz
+.DS_Store
+
+# Generated pipeline files
+pipelines/
+
+# Reference OpenAPI specs (too large for repo)
+index (1).json
+index (2).yaml
+stderr.log

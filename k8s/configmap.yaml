@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: harness-mcp-config
+  namespace: harness-mcp
+  labels:
+    app.kubernetes.io/name: harness-mcp-server
+data:
+  HARNESS_BASE_URL: "https://app.harness.io"
+  HARNESS_DEFAULT_ORG_ID: "default"
+  LOG_LEVEL: "info"
+  PORT: "3000"

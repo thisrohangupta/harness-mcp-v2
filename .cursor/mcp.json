@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "harness-mcp-server": {
+      "command": "/Users/prachishah/.nvm/versions/node/v20.20.1/bin/node",
+      "args": [
+        "/Users/prachishah/Downloads/harness-mcp-v2-main/build/index.js",
+        "stdio"
+      ],
+      "env": {
+        "HARNESS_API_KEY": "pat.l7B_kbSEQD2wjrM7PShm5w.69b9930a0522720567d3c4d3.Hl3QLSi30rpPEoXKqnvz",
+        "HARNESS_DEFAULT_ORG_ID": "PROD",
+        "HARNESS_DEFAULT_PROJECT_ID": "Harness",
+        "LOG_LEVEL": "info",
+        "HARNESS_BASE_URL": "https://harness0.harness.io"
+      }
+    }
+  }
+}

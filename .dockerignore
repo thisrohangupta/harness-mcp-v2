@@ -1,0 +1,10 @@
+node_modules
+build
+.env
+.git
+.github
+tests
+tasks
+*.tgz
+.DS_Store
+.claude

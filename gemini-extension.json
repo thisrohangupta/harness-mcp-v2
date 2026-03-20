@@ -1,0 +1,19 @@
+{
+  "name": "harness-mcp",
+  "description": "AI-native interface to the Harness Platform — ask questions, diagnose failures, and manage deployments without leaving your terminal",
+  "version": "0.5.2",
+  "mcpServers": {
+    "harness": {
+      "command": "node",
+      "args": [
+        "--env-file=.env",
+        "build/index.js",
+        "stdio"
+      ],
+      "env": {
+        "HARNESS_BASE_URL": "https://app.harness.io"
+      }
+    }
+  },
+  "contextFileName": "docs/gemini.md"
+}

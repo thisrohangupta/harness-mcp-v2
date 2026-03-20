@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: harness-mcp-server
+  namespace: harness-mcp
+  labels:
+    app.kubernetes.io/name: harness-mcp-server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: harness-mcp-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
