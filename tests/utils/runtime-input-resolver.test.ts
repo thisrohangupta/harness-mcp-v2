@@ -6,6 +6,7 @@ import {
   substituteInputs,
   fetchRuntimeInputTemplate,
   resolveRuntimeInputs,
+  expandCodebaseBuildInputs,
   clearTemplateCache,
 } from "../../src/utils/runtime-input-resolver.js";
 import { HarnessClient } from "../../src/client/harness-client.js";
@@ -716,5 +717,347 @@ describe("substituteInputs — structural inputs", () => {
       type: "branch",
       spec: { branch: "main" },
     });
+  });
+});
+
+const CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE = `pipeline:
+  properties:
+    ci:
+      codebase:
+        connectorRef: my_git_connector
+        repoName: my-repo
+        build:
+          type: "<+input>"
+          spec:
+            branch: "<+input>"
+`;
+
+const CODEBASE_WHOLE_BUILD_TEMPLATE = `pipeline:
+  properties:
+    ci:
+      codebase:
+        connectorRef: my_git_connector
+        build: "<+input>"
+`;
+
+const CODEBASE_TAG_TEMPLATE = `pipeline:
+  properties:
+    ci:
+      codebase:
+        build:
+          type: "<+input>"
+          spec:
+            tag: "<+input>"
+`;
+
+const CODEBASE_WITH_VARIABLES_TEMPLATE = `pipeline:
+  properties:
+    ci:
+      codebase:
+        build:
+          type: "<+input>"
+          spec:
+            branch: "<+input>"
+  variables:
+    - name: "env"
+      type: "String"
+      value: "<+input>"
+`;
+
+const NO_CODEBASE_TEMPLATE = `pipeline:
+  variables:
+    - name: "branch"
+      type: "String"
+      value: "<+input>"
+    - name: "env"
+      type: "String"
+      value: "<+input>"
+`;
+
+describe("expandCodebaseBuildInputs", () => {
+  it("expands branch input into build structure for individual-field template", () => {
+    const result = expandCodebaseBuildInputs(
+      { branch: "main" },
+      CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE,
+    );
+
+    expect(result["build.type"]).toBe("branch");
+    expect(result["build.spec.branch"]).toBe("main");
+    expect(result.build).toEqual({ type: "branch", spec: { branch: "main" } });
+    expect(result.branch).toBe("main");
+  });
+
+  it("expands tag input into build structure", () => {
+    const result = expandCodebaseBuildInputs(
+      { tag: "v1.0" },
+      CODEBASE_TAG_TEMPLATE,
+    );
+
+    expect(result["build.type"]).toBe("tag");
+    expect(result["build.spec.tag"]).toBe("v1.0");
+    expect(result.build).toEqual({ type: "tag", spec: { tag: "v1.0" } });
+  });
+
+  it("expands pr_number input into PR build structure", () => {
+    const result = expandCodebaseBuildInputs(
+      { pr_number: "42" },
+      CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE,
+    );
+
+    expect(result["build.type"]).toBe("PR");
+    expect(result["build.spec.number"]).toBe("42");
+    expect(result.number).toBe("42");
+    expect(result.build).toEqual({ type: "PR", spec: { number: "42" } });
+  });
+
+  it("expands commit_sha input into commitSha build structure", () => {
+    const result = expandCodebaseBuildInputs(
+      { commit_sha: "abc123" },
+      CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE,
+    );
+
+    expect(result["build.type"]).toBe("commitSha");
+    expect(result["build.spec.commitSha"]).toBe("abc123");
+    expect(result.commitSha).toBe("abc123");
+  });
+
+  it("does not expand when template has no codebase section", () => {
+    const result = expandCodebaseBuildInputs(
+      { branch: "main" },
+      NO_CODEBASE_TEMPLATE,
+    );
+
+    expect(result).toEqual({ branch: "main" });
+    expect(result["build.type"]).toBeUndefined();
+  });
+
+  it("does not expand when user already provides build object", () => {
+    const result = expandCodebaseBuildInputs(
+      { build: { type: "tag", spec: { tag: "v2.0" } } },
+      CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE,
+    );
+
+    expect(result["build.type"]).toBeUndefined();
+    expect(result.build).toEqual({ type: "tag", spec: { tag: "v2.0" } });
+  });
+
+  it("does not expand when user already provides type", () => {
+    const result = expandCodebaseBuildInputs(
+      { type: "branch", branch: "main" },
+      CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE,
+    );
+
+    expect(result["build.type"]).toBeUndefined();
+    expect(result.build).toBeUndefined();
+  });
+
+  it("does not expand when no codebase keys in inputs", () => {
+    const result = expandCodebaseBuildInputs(
+      { env: "prod", replicas: "3" },
+      CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE,
+    );
+
+    expect(result).toEqual({ env: "prod", replicas: "3" });
+  });
+
+  it("preserves other input keys alongside expansion", () => {
+    const result = expandCodebaseBuildInputs(
+      { branch: "main", env: "prod", SERVICE_LIST: "my-svc" },
+      CODEBASE_WITH_VARIABLES_TEMPLATE,
+    );
+
+    expect(result.branch).toBe("main");
+    expect(result.env).toBe("prod");
+    expect(result.SERVICE_LIST).toBe("my-svc");
+    expect(result["build.type"]).toBe("branch");
+    expect(result["build.spec.branch"]).toBe("main");
+  });
+});
+
+describe("substituteInputs — auto-expanded codebase inputs", () => {
+  it("resolves individual-field template with expanded branch inputs", () => {
+    const expanded = expandCodebaseBuildInputs(
+      { branch: "main" },
+      CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE,
+    );
+    const result = substituteInputs(CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE, expanded);
+
+    expect(result.matched).toContain("build.type");
+    expect(result.matched).toContain("branch");
+    expect(result.unmatchedRequired).toHaveLength(0);
+
+    const YAML = require("yaml");
+    const parsed = YAML.parse(result.yaml);
+    expect(parsed.pipeline.properties.ci.codebase.build.type).toBe("branch");
+    expect(parsed.pipeline.properties.ci.codebase.build.spec.branch).toBe("main");
+  });
+
+  it("resolves whole-build template with expanded branch inputs", () => {
+    const expanded = expandCodebaseBuildInputs(
+      { branch: "develop" },
+      CODEBASE_WHOLE_BUILD_TEMPLATE,
+    );
+    const result = substituteInputs(CODEBASE_WHOLE_BUILD_TEMPLATE, expanded);
+
+    expect(result.matched).toContain("build");
+    expect(result.unmatchedRequired).toHaveLength(0);
+
+    const YAML = require("yaml");
+    const parsed = YAML.parse(result.yaml);
+    expect(parsed.pipeline.properties.ci.codebase.build).toEqual({
+      type: "branch",
+      spec: { branch: "develop" },
+    });
+  });
+
+  it("resolves tag inputs for individual-field template", () => {
+    const expanded = expandCodebaseBuildInputs(
+      { tag: "v2.0" },
+      CODEBASE_TAG_TEMPLATE,
+    );
+    const result = substituteInputs(CODEBASE_TAG_TEMPLATE, expanded);
+
+    expect(result.unmatchedRequired).toHaveLength(0);
+
+    const YAML = require("yaml");
+    const parsed = YAML.parse(result.yaml);
+    expect(parsed.pipeline.properties.ci.codebase.build.type).toBe("tag");
+    expect(parsed.pipeline.properties.ci.codebase.build.spec.tag).toBe("v2.0");
+  });
+
+  it("resolves codebase + variables together", () => {
+    const expanded = expandCodebaseBuildInputs(
+      { branch: "main", env: "production" },
+      CODEBASE_WITH_VARIABLES_TEMPLATE,
+    );
+    const result = substituteInputs(CODEBASE_WITH_VARIABLES_TEMPLATE, expanded);
+
+    expect(result.matched).toContain("build.type");
+    expect(result.matched).toContain("branch");
+    expect(result.matched).toContain("env");
+    expect(result.unmatchedRequired).toHaveLength(0);
+
+    const YAML = require("yaml");
+    const parsed = YAML.parse(result.yaml);
+    expect(parsed.pipeline.properties.ci.codebase.build.type).toBe("branch");
+    expect(parsed.pipeline.properties.ci.codebase.build.spec.branch).toBe("main");
+  });
+
+  it("does not interfere with non-codebase templates", () => {
+    const expanded = expandCodebaseBuildInputs(
+      { branch: "main", env: "prod" },
+      NO_CODEBASE_TEMPLATE,
+    );
+    const result = substituteInputs(NO_CODEBASE_TEMPLATE, expanded);
+
+    expect(result.matched).toContain("branch");
+    expect(result.matched).toContain("env");
+    expect(result.unmatchedRequired).toHaveLength(0);
+  });
+});
+
+describe("resolveRuntimeInputs — codebase auto-expansion", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    clearTemplateCache();
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+    clearTemplateCache();
+  });
+
+  it("auto-resolves branch input for CI pipeline with individual-field codebase template", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        status: "SUCCESS",
+        data: { inputSetTemplateYaml: CODEBASE_INDIVIDUAL_FIELDS_TEMPLATE },
+      }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+
+    const client = new HarnessClient(makeConfig());
+    const result = await resolveRuntimeInputs(
+      client,
+      { branch: "main" },
+      { pipelineId: "ci_pipeline", orgId: "default", projectId: "test-project" },
+    );
+
+    expect(result.unmatchedRequired).toHaveLength(0);
+    expect(result.yaml).not.toContain("<+input>");
+
+    const YAML = require("yaml");
+    const parsed = YAML.parse(result.yaml);
+    expect(parsed.pipeline.properties.ci.codebase.build.type).toBe("branch");
+    expect(parsed.pipeline.properties.ci.codebase.build.spec.branch).toBe("main");
+  });
+
+  it("auto-resolves branch input for whole-build codebase template", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        status: "SUCCESS",
+        data: { inputSetTemplateYaml: CODEBASE_WHOLE_BUILD_TEMPLATE },
+      }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+
+    const client = new HarnessClient(makeConfig());
+    const result = await resolveRuntimeInputs(
+      client,
+      { branch: "feature/new" },
+      { pipelineId: "ci_pipeline_2", orgId: "default", projectId: "test-project" },
+    );
+
+    expect(result.unmatchedRequired).toHaveLength(0);
+
+    const YAML = require("yaml");
+    const parsed = YAML.parse(result.yaml);
+    expect(parsed.pipeline.properties.ci.codebase.build).toEqual({
+      type: "branch",
+      spec: { branch: "feature/new" },
+    });
+  });
+
+  it("auto-resolves branch with extra variables for mixed codebase+variables template", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        status: "SUCCESS",
+        data: { inputSetTemplateYaml: CODEBASE_WITH_VARIABLES_TEMPLATE },
+      }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+
+    const client = new HarnessClient(makeConfig());
+    const result = await resolveRuntimeInputs(
+      client,
+      { branch: "main", env: "staging" },
+      { pipelineId: "ci_with_vars", orgId: "default", projectId: "test-project" },
+    );
+
+    expect(result.unmatchedRequired).toHaveLength(0);
+
+    const YAML = require("yaml");
+    const parsed = YAML.parse(result.yaml);
+    expect(parsed.pipeline.properties.ci.codebase.build.type).toBe("branch");
+    expect(parsed.pipeline.properties.ci.codebase.build.spec.branch).toBe("main");
+  });
+
+  it("does not expand for non-codebase templates", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        status: "SUCCESS",
+        data: { inputSetTemplateYaml: NO_CODEBASE_TEMPLATE },
+      }), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+
+    const client = new HarnessClient(makeConfig());
+    const result = await resolveRuntimeInputs(
+      client,
+      { branch: "main", env: "prod" },
+      { pipelineId: "cd_pipeline", orgId: "default", projectId: "test-project" },
+    );
+
+    expect(result.matched).toContain("branch");
+    expect(result.matched).toContain("env");
+    expect(result.unmatchedRequired).toHaveLength(0);
   });
 });

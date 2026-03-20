@@ -285,6 +285,77 @@ export function substituteInputs(
 }
 
 /**
+ * Auto-expands simple codebase inputs (branch, tag, pr_number, commit_sha) into
+ * the full structure that Harness CI pipeline templates expect.
+ *
+ * Handles two common template patterns:
+ * 1. `build: "<+input>"` — entire build is a single placeholder
+ *    → provides full build object for subtree replacement
+ * 2. Individual field placeholders (`type: "<+input>"` + `spec.branch: "<+input>"`)
+ *    → provides dot-path keys ("build.type", "build.spec.branch") for suffix matching
+ */
+export function expandCodebaseBuildInputs(
+  inputs: Record<string, unknown>,
+  templateYaml: string,
+): Record<string, unknown> {
+  if (!templateYaml.includes("codebase") || !templateYaml.includes("build")) {
+    return inputs;
+  }
+
+  if (
+    inputs.build !== undefined ||
+    inputs.type !== undefined ||
+    inputs["build.type"] !== undefined
+  ) {
+    return inputs;
+  }
+
+  let buildType: string | null = null;
+  let specKey: string | null = null;
+  let specValue: unknown = null;
+
+  if (inputs.branch !== undefined) {
+    buildType = "branch";
+    specKey = "branch";
+    specValue = inputs.branch;
+  } else if (inputs.tag !== undefined) {
+    buildType = "tag";
+    specKey = "tag";
+    specValue = inputs.tag;
+  } else if (inputs.pr_number !== undefined || inputs.number !== undefined) {
+    buildType = "PR";
+    specKey = "number";
+    specValue = inputs.pr_number ?? inputs.number;
+  } else if (inputs.commit_sha !== undefined || inputs.commitSha !== undefined) {
+    buildType = "commitSha";
+    specKey = "commitSha";
+    specValue = inputs.commit_sha ?? inputs.commitSha;
+  }
+
+  if (!buildType || !specKey) return inputs;
+
+  const result = { ...inputs };
+
+  result["build.type"] = buildType;
+  result[`build.spec.${specKey}`] = specValue;
+
+  result.build = {
+    type: buildType,
+    spec: { [specKey]: specValue },
+  };
+
+  if (buildType === "PR" && inputs.pr_number !== undefined && inputs.number === undefined) {
+    result.number = specValue;
+  }
+  if (buildType === "commitSha" && inputs.commit_sha !== undefined && inputs.commitSha === undefined) {
+    result.commitSha = specValue;
+  }
+
+  log.info(`Auto-expanded codebase build inputs: type=${buildType}, ${specKey}=${specValue}`);
+  return result;
+}
+
+/**
  * High-level resolver: fetches the template and substitutes user inputs.
  * Returns the resolved YAML string ready for the pipeline execute API.
  *
@@ -307,7 +378,9 @@ export async function resolveRuntimeInputs(
 
   log.debug("Template YAML fetched", { templateLength: templateYaml.length });
 
-  const result = substituteInputs(templateYaml, flatInputs);
+  const expandedInputs = expandCodebaseBuildInputs(flatInputs, templateYaml);
+
+  const result = substituteInputs(templateYaml, expandedInputs);
 
   if (result.matched.length > 0) {
     log.info(`Resolved ${result.matched.length} runtime inputs: ${result.matched.join(", ")}`);
