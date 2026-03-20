@@ -6,6 +6,8 @@ import type { Config } from "../config.js";
 import { ACTION_VALUES } from "../client/dto/intelligence.js";
 import type { ServiceChatRequest } from "../client/dto/intelligence.js";
 import { IntelligenceClient } from "../client/intelligence-client.js";
+import { ChatbotClient } from "../client/chatbot-client.js";
+import type { ChatHistoryItem } from "../client/dto/chatbot.js";
 import { jsonResult, errorResult } from "../utils/response-formatter.js";
 import { HarnessApiError, isUserFixableApiError, toMcpError } from "../utils/errors.js";
 import { sendProgress, sendLog } from "../utils/progress.js";
@@ -34,6 +36,7 @@ export function registerAskTool(
   }
 
   const intelligenceClient = new IntelligenceClient(client);
+  const chatbotClient = new ChatbotClient(client);
   const askRateLimiter = new RateLimiter(ASK_MAX_BURST, ASK_REFILL_RATE_PER_MS);
 
   server.registerTool(
@@ -42,10 +45,11 @@ export function registerAskTool(
       description:
         "Ask the Harness AI DevOps Agent to create or update entities (pipelines, environments, connectors, services, secrets) via natural language. " +
         "The entity is persisted in Harness automatically on the initial call. " +
-        "For multi-turn refinement, pass the returned conversation_id back.",
+        "For multi-turn refinement, pass the returned conversation_id back. " +
+        "Use action ASK_DOCUMENTATION to query the Harness Documentation Bot — it retrieves and summarizes information from Harness docs (https://developer.harness.io/docs) with source links.",
       inputSchema: {
-        prompt: z.string().min(1).describe("The natural language prompt for the AI DevOps agent"),
-        action: z.enum(ACTION_VALUES).describe("The action to perform (e.g. CREATE_PIPELINE, UPDATE_SERVICE)"),
+        prompt: z.string().min(1).describe("The natural language prompt for the AI DevOps agent, or the question for the documentation bot when action is ASK_DOCUMENTATION"),
+        action: z.enum(ACTION_VALUES).describe("The action to perform (e.g. CREATE_PIPELINE, UPDATE_SERVICE, ASK_DOCUMENTATION)"),
         stream: z.boolean().describe("Stream the response with real-time progress (default: false for reliability)").default(false).optional(),
         conversation_id: z
           .string()
@@ -59,6 +63,15 @@ export function registerAskTool(
             }),
           )
           .describe("Context for UPDATE operations — pass existing YAML to modify")
+          .optional(),
+        chat_history: z
+          .array(
+            z.object({
+              question: z.string().describe("The question in the chat history"),
+              answer: z.string().describe("The answer in the chat history"),
+            }),
+          )
+          .describe("Optional chat history for context (only used with ASK_DOCUMENTATION action)")
           .optional(),
         org_id: z.string().describe("Organization identifier (overrides default)").optional(),
         project_id: z.string().describe("Project identifier (overrides default)").optional(),
@@ -75,6 +88,28 @@ export function registerAskTool(
       try {
         await askRateLimiter.acquire();
 
+        // ASK_DOCUMENTATION: route to the Harness Documentation Bot
+        if (args.action === "ASK_DOCUMENTATION") {
+          const chatHistory: ChatHistoryItem[] | undefined = args.chat_history?.map((item) => ({
+            question: item.question,
+            answer: item.answer,
+          }));
+
+          log.info("Asking documentation chatbot", { questionLength: args.prompt.length });
+
+          const response = await chatbotClient.sendMessage(
+            { question: args.prompt, chat_history: chatHistory },
+            {
+              orgId: args.org_id ?? config.HARNESS_DEFAULT_ORG_ID,
+              projectId: args.project_id ?? config.HARNESS_DEFAULT_PROJECT_ID,
+            },
+            { signal: extra.signal },
+          );
+
+          return jsonResult({ response });
+        }
+
+        // All other actions: route to the Intelligence Service
         const conversationId = args.conversation_id ?? crypto.randomUUID();
 
         const harnessContext = {
