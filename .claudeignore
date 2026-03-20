@@ -1,0 +1,161 @@
+# Claude Code Ignore File
+# Reduces token usage by preventing Claude from reading unnecessary files
+# Auto-generated: 2026-03-20
+
+# === Build Artifacts ===
+dist/
+build/
+out/
+target/
+.next/
+.nuxt/
+.output/
+.vite/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# === Dependencies ===
+node_modules/
+.pnpm-store/
+.yarn/
+vendor/
+.bundle/
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+
+# === Lock Files (RTK handles these, but extra safety) ===
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+poetry.lock
+Pipfile.lock
+Cargo.lock
+go.sum
+composer.lock
+Gemfile.lock
+
+# === Generated Code ===
+*_pb.go
+*.pb.go
+*_pb2.py
+*_pb2_grpc.py
+wire_gen.go
+*.generated.go
+*.gen.go
+*.pb.*.go
+# Protobuf generated
+**/gen/**/*.go
+**/generated/**
+
+# === Python ===
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.egg-info/
+.eggs/
+*.egg
+
+# === Go ===
+# Binaries
+*.test
+*.prof
+# Coverage
+coverage.out
+coverage.html
+
+# === JavaScript/TypeScript ===
+*.js.map
+*.min.js
+*.min.css
+.eslintcache
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# === IDE & Editor ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+.project
+.classpath
+.settings/
+
+# === Logs ===
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# === Test Coverage ===
+coverage/
+.nyc_output/
+htmlcov/
+*.cover
+.hypothesis/
+
+# === Database ===
+*.db
+*.sqlite
+*.sqlite3
+
+# === Temp Files ===
+tmp/
+temp/
+*.tmp
+.cache/
+.temp/
+
+# === CI/CD ===
+.gitlab-ci-local/
+
+# === Docker ===
+.dockerignore
+
+# === Large Data Files ===
+*.csv
+*.parquet
+*.arrow
+*.hdf5
+*.h5
+
+# === Media (if not essential) ===
+# Uncomment if you have large media files
+# *.mp4
+# *.mov
+# *.avi
+# *.mkv
+# *.mp3
+# *.wav
+
+# === Git ===
+.git/
+.gitattributes
+
+# === OS ===
+Thumbs.db
+Desktop.ini
+
+# === Misc ===
+.env.local
+.env.*.local
