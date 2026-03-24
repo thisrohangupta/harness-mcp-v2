@@ -32,7 +32,7 @@ export const documentationToolset: ToolsetDefinition = {
         "For follow-up/multi-turn conversations, use harness_list(resource_type='documentation', search_term='your question', filters={conversation_id: '...', chat_history: [...]}).",
       toolset: "documentation",
       scope: "account",
-      baseUrlOverride: "chatbot",
+      product: "chatbot",
       identifierFields: [],
       listFilterFields: [
         { name: "question", description: "The question to ask the documentation chatbot" },

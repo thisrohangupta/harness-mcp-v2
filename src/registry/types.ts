@@ -37,7 +37,7 @@ export type ToolsetName =
   | "overrides"
   | "documentation";
 
-export type ProductName = "harness" | "fme";
+export type ProductName = "harness" | "fme" | "chatbot";
 
 export type OperationName = "list" | "get" | "create" | "update" | "delete";
 

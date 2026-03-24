@@ -358,7 +358,10 @@ export class Registry {
     // Make request — resolve base URL and auth from product backend
     const product = def.product ?? "harness";
     const baseUrl = resolveProductBaseUrl(this.config, product);
-    const productHeaders: Record<string, string> = { ...spec.headers };
+    const productHeaders: Record<string, string> = {
+      ...spec.headers,
+      ...(spec.headersBuilder ? spec.headersBuilder(input) : {}),
+    };
     if (product === "fme") {
       productHeaders["Authorization"] = `Bearer ${this.config.HARNESS_API_KEY}`;
     }
