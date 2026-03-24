@@ -16,8 +16,7 @@ export type RequestAction =
   | "UPDATE_SERVICE"
   | "CREATE_CONNECTOR"
   | "UPDATE_CONNECTOR"
-  | "CREATE_PROCESS"
-  | "ASK_DOCUMENTATION";
+  | "CREATE_PROCESS";
 
 /** Const array of all action strings — used for Zod enum validation */
 export const ACTION_VALUES = [
@@ -32,7 +31,6 @@ export const ACTION_VALUES = [
   "CREATE_CONNECTOR",
   "UPDATE_CONNECTOR",
   "CREATE_PROCESS",
-  "ASK_DOCUMENTATION",
 ] as const;
 
 /** A context item passed to the intelligence service (e.g. existing YAML for updates) */

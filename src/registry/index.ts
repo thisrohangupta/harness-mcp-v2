@@ -32,6 +32,7 @@ import { settingsToolset } from "./toolsets/settings.js";
 import { platformToolset } from "./toolsets/platform.js";
 import { intelligenceToolset } from "./toolsets/intelligence.js";
 import { visualizationsToolset } from "./toolsets/visualizations.js";
+import { documentationToolset } from "./toolsets/documentation.js";
 
 const log = createLogger("registry");
 
@@ -64,6 +65,7 @@ const ALL_TOOLSETS: ToolsetDefinition[] = [
   platformToolset,
   intelligenceToolset,
   visualizationsToolset,
+  documentationToolset,
 ];
 
 /**
@@ -308,7 +310,9 @@ export class Registry {
       params,
       body,
       ...(baseUrl ? { baseUrl } : {}),
-      ...(spec.headers ? { headers: spec.headers } : {}),
+      ...(spec.headers || spec.headersBuilder
+        ? { headers: { ...spec.headers, ...spec.headersBuilder?.(input) } }
+        : {}),
       signal,
     });
 
