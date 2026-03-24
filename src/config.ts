@@ -37,6 +37,7 @@ const RawConfigSchema = z.object({
   JWT_ISSUER: z.string().optional(),
   JWT_AUDIENCE: z.string().optional(),
   JWT_ALGORITHM: z.enum(["HS256", "RS256", "ES256"]).default("HS256"),
+  HARNESS_CHATBOT_BASE_URL: z.string().url().optional(),
 });
 
 export const ConfigSchema = RawConfigSchema.superRefine((data, ctx) => {
@@ -118,8 +119,9 @@ const FME_BASE_URL = "https://api.split.io";
  * - "harness" → undefined (uses the default client base URL)
  * - "fme"     → https://api.split.io
  */
-export function resolveProductBaseUrl(_config: Config, product: "harness" | "fme"): string | undefined {
+export function resolveProductBaseUrl(_config: Config, product: "harness" | "fme" | "chatbot"): string | undefined {
   if (product === "fme") return FME_BASE_URL;
+  if (product === "chatbot") return _config.HARNESS_CHATBOT_BASE_URL;
   return undefined;
 }
 

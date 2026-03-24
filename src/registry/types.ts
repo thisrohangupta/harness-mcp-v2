@@ -34,9 +34,10 @@ export type ToolsetName =
   | "visualizations"
   | "governance"
   | "freeze"
-  | "overrides";
+  | "overrides"
+  | "documentation";
 
-export type ProductName = "harness" | "fme";
+export type ProductName = "harness" | "fme" | "chatbot";
 
 export type OperationName = "list" | "get" | "create" | "update" | "delete";
 
@@ -128,6 +129,8 @@ export interface EndpointSpec {
   bodyBuilder?: (input: Record<string, unknown>) => unknown;
   /** Static headers to merge into the request (e.g. Content-Type override) */
   headers?: Record<string, string>;
+  /** Dynamic headers built per-request from tool input */
+  headersBuilder?: (input: Record<string, unknown>) => Record<string, string>;
   /** For GET: extract the useful part from the raw response */
   responseExtractor?: (raw: unknown) => unknown;
   /** Request binary (ArrayBuffer) response instead of JSON. Used for ZIP download endpoints. */
