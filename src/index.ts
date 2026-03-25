@@ -135,6 +135,16 @@ async function startHttp(config: Config, port: number): Promise<void> {
       config.JWT_AUDIENCE,
       config.JWT_ALGORITHM,
     );
+    // If HARNESS_API_KEY is configured, inject it as x-api-key default so the
+    // auth middleware picks it up when the client doesn't send the header.
+    // An explicit x-api-key header from the client always wins.
+    if (config.HARNESS_API_KEY) {
+      app.use((req, _res, next) => {
+        req.headers["x-api-key"] ??= config.HARNESS_API_KEY;
+        next();
+      });
+    }
+
     const jwtMiddleware = createJwtAuthMiddleware(
       validator,
       !!config.HARNESS_API_KEY,  // Allow API key fallback if HARNESS_API_KEY is set
