@@ -24,9 +24,8 @@ const log = createLogger("main");
  * Create a fully-configured MCP server instance with all tools, resources, and prompts.
  */
 function createHarnessServer(config: Config, authContext?: AuthContext): McpServer {
-  // In JWT-only mode, override placeholder account ID with real one from authContext
   let effectiveConfig = config;
-  if (authContext && authContext.accountId && authContext.accountId !== "jwt-mode") {
+  if (authContext?.accountId) {
     effectiveConfig = {
       ...config,
       HARNESS_ACCOUNT_ID: authContext.accountId,
@@ -449,7 +448,7 @@ async function main(): Promise<void> {
   log.info("Starting harness-mcp-server", {
     transport,
     baseUrl: config.HARNESS_BASE_URL,
-    accountId: config.HARNESS_ACCOUNT_ID,
+    accountId: config.HARNESS_ACCOUNT_ID ?? "(jwt-mode, resolved per-request)",
     defaultOrg: config.HARNESS_DEFAULT_ORG_ID,
     defaultProject: config.HARNESS_DEFAULT_PROJECT_ID ?? "(none)",
     toolsets: config.HARNESS_TOOLSETS ?? "(all)",

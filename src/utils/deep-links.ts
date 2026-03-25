@@ -3,12 +3,12 @@
  */
 export function buildDeepLink(
   baseUrl: string,
-  accountId: string,
+  accountId: string | undefined,
   template: string,
   params: Record<string, string>,
 ): string {
   let url = template;
-  url = url.replace("{accountId}", accountId);
+  url = url.replace("{accountId}", accountId ?? "");
   for (const [key, value] of Object.entries(params)) {
     url = url.replace(`{${key}}`, encodeURIComponent(value));
   }

@@ -90,22 +90,13 @@ export const ConfigSchema = RawConfigSchema.superRefine((data, ctx) => {
     return;
   }
 
-  // For JWT-only mode without API key, set a placeholder account ID
-  // (actual account ID comes from JWT claims per-request)
-  if (!accountId && hasJwtSecret) {
-    accountId = "jwt-mode";  // Placeholder — overridden per-request
-  }
 }).transform((data) => {
-  // Extract account ID after validation
   let accountId = data.HARNESS_ACCOUNT_ID;
   if (!accountId && data.HARNESS_API_KEY) {
     accountId = extractAccountIdFromToken(data.HARNESS_API_KEY);
   }
-  if (!accountId && data.JWT_SECRET) {
-    accountId = "jwt-mode";
-  }
 
-  return { ...data, HARNESS_ACCOUNT_ID: accountId! };
+  return { ...data, HARNESS_ACCOUNT_ID: accountId };
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

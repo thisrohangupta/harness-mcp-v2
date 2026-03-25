@@ -31,7 +31,7 @@ interface ListResult {
 function summarizeExecution(
   exec: ExecutionItem,
   baseUrl: string,
-  accountId: string,
+  accountId: string | undefined,
   orgId: string,
   projectId: string,
 ): Record<string, unknown> {
