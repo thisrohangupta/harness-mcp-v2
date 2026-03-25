@@ -52,6 +52,42 @@ describe("HarnessClient", () => {
       expect(url.searchParams.get("orgIdentifier")).toBe("myorg");
     });
 
+    it("uses accountIdResolver over static config when set", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(makeConfig({ HARNESS_ACCOUNT_ID: "jwt-mode" }));
+      client.setAccountIdResolver(() => "real-account-123");
+
+      await client.request({ path: "/ng/api/projects" });
+
+      const url = new URL(fetchSpy.mock.calls[0][0] as string);
+      expect(url.searchParams.get("accountIdentifier")).toBe("real-account-123");
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers["Harness-Account"]).toBe("real-account-123");
+    });
+
+    it("uses accountIdResolver for log-service accountID param too", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(makeConfig({ HARNESS_ACCOUNT_ID: "jwt-mode" }));
+      client.setAccountIdResolver(() => "real-account-123");
+
+      await client.request({ path: "/gateway/log-service/blob/download" });
+
+      const url = new URL(fetchSpy.mock.calls[0][0] as string);
+      expect(url.searchParams.get("accountIdentifier")).toBe("real-account-123");
+      expect(url.searchParams.get("accountID")).toBe("real-account-123");
+    });
+
+    it("falls back to static config when resolver returns undefined", async () => {
+      fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
+      const client = new HarnessClient(makeConfig({ HARNESS_ACCOUNT_ID: "static-account" }));
+      client.setAccountIdResolver(() => undefined);
+
+      await client.request({ path: "/ng/api/projects" });
+
+      const url = new URL(fetchSpy.mock.calls[0][0] as string);
+      expect(url.searchParams.get("accountIdentifier")).toBe("static-account");
+    });
+
     it("adds accountID param for log-service paths", async () => {
       fetchSpy.mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
       const client = new HarnessClient(makeConfig());
