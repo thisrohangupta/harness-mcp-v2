@@ -1,14 +1,22 @@
 // ── Toolset ──────────────────────────────────────────────────────────
 
-export const descToolsetChaos = `Harness Chaos Engineering — experiments, probes, hubs, faults, ChaosGuard rules/conditions, Kubernetes and Linux infrastructure, network maps, recommendations, risks, load tests, and templates (experiment, fault, probe, action)`;
+export const descToolsetChaos = `Harness Chaos Engineering — run/stop/govern chaos experiments; manage probes, faults (Kubernetes, AWS, Azure, GCP, Linux), actions, hubs, and templates (experiment, fault, probe, action); inspect experiment runs and resiliency scores; configure Kubernetes and Linux infrastructure and environments; visualize blast radius via network maps; enforce governance via ChaosGuard rules/conditions; analyze recommendations and risks; run load tests`;
 
 // ── Resource Descriptions ────────────────────────────────────────────
 
-export const descChaosExperiment = `Chaos experiment definition. Supports list, get, and execute actions: run, stop. Use chaos_experiment_variable list to discover required runtime inputs before running.`;
+export const descChaosExperiment = `Chaos experiment definition. Supports list, get, delete, and execute actions: run, stop. Use chaos_experiment_variable list to discover required runtime inputs before running.`;
 
-export const descChaosExperimentRun = `Result of a chaos experiment run. Supports get.`;
+export const descChaosExperimentRun = `Experiment run timeline — full snapshot of an ongoing or completed chaos experiment run.
+Returns the execution pipeline with individual nodes (faults, probes, actions), each with status, timing, and chaos data.
+Also returns experiment metadata, infra details, calculated resiliency score, manifest version, and run sequence.
+This is a read-only endpoint — it does NOT start a run. To trigger a run, use chaos_experiment execute action: run.
+Requires experiment_id plus either run_id (experimentRunId) or notify_id (for pipeline-triggered runs).
+Supports get.`;
 
-export const descChaosProbe = `Chaos resilience probe. Supports list, get, delete, and execute actions: enable, verify, get_manifest.`;
+export const descChaosProbe = `Chaos resilience probe — declarative health checker that monitors application health before, during, and after a fault and determines the fault outcome.
+Types: HTTP, CMD, Prometheus, K8s, SLO, Datadog, Dynatrace, Container, APM. Infra: Kubernetes, Linux, Windows.
+Must be disabled before deleting; default (system) probes cannot be deleted or disabled.
+Supports list, get, delete, and execute actions: enable, verify, get_manifest.`;
 
 export const descChaosExperimentTemplate = `Reusable, versioned chaos experiment template stored in a ChaosHub (Git-backed repository).
 Templates are pre-configured experiment blueprints that standardize chaos practices across teams — they support version control, revision history, typed input variables, and rendered YAML.
@@ -76,13 +84,27 @@ Supports search by name and sort by lastModifiedAt or name.`;
 
 // ── Operation Descriptions ───────────────────────────────────────────
 
-export const descListExperiments = `List chaos experiments`;
+export const descListExperiments = `List chaos experiments with optional filtering.
+Supports filtering by experiment name, status, infrastructure (ID, name, active state), tags, environment, date range, and bulk experiment IDs.
+Default page size is 15, max 50.`;
 export const descGetExperiment = `Get chaos experiment details including revisions and recent run details`;
 
-export const descGetExperimentRun = `Get chaos experiment run result with step-level details, resiliency score, and fault data`;
+export const descGetExperimentRun = `Get the full timeline of a chaos experiment run. This is a read-only endpoint — it does NOT trigger a run.
+Returns the execution pipeline: individual fault/probe/action nodes with status, timing, chaos data, and error details.
+Also returns experiment name, infraID, resiliency score, run phase, manifest version, and template details.
+Requires experiment_id; pass run_id (experimentRunId) or notify_id (pipeline-triggered) to identify the specific run.
+To start a new run, use chaos_experiment execute action: run instead.`;
 
-export const descListProbes = `List chaos probes`;
-export const descGetProbe = `Get chaos probe details`;
+export const descListProbes = `List chaos probes with optional filtering.
+Supports filtering by name, tags, date range, probe IDs, infrastructure type, probe entity type, and sorting.
+Default page size is 50, max 50.`;
+
+export const descGetProbe = `Get chaos probe details by ID.
+Returns probe type, infrastructure type, enabled/verified status, tags, run properties, probe properties, recent runs, and reference count.`;
+
+export const descSearchProbes = `Search probes by name (case-insensitive).`;
+export const descProbeIds = `Comma-separated probe IDs for bulk lookup (e.g. "id1,id2,id3").`;
+export const descProbeSortField = `Field to sort probe results by. Values: NAME, TIME, ENABLED. Defaults to TIME.`;
 
 export const descListExperimentTemplates = `List chaos experiment templates from chaos hubs.
 Returns a paginated list of templates with identity, name, description, tags, revision, infraType, hub identity, and audit info.
@@ -215,9 +237,14 @@ export const descGetRisk = `Get chaos risk details`;
 
 // ── Action Descriptions ──────────────────────────────────────────────
 
-export const descRunExperiment = `Run a chaos experiment`;
-export const descEnableProbe = `Enable a chaos probe`;
-export const descVerifyProbe = `Verify a chaos probe configuration`;
+export const descRunExperiment = `Trigger a new chaos experiment run. This is an action — it starts execution.
+Returns notifyId, experimentRunId, experimentId, and experimentName.
+After triggering, use chaos_experiment_run get with the returned experimentRunId to poll for status and results.`;
+export const descEnableProbe = `Enable or disable a chaos probe. Pass is_enabled=true to enable, false to disable.
+Use is_bulk_update=true to enable/disable across all experiments that reference this probe.
+Default (system) probes cannot be enabled or disabled.`;
+export const descVerifyProbe = `Mark a chaos probe as verified or unverified. Verified probes are trusted and validated for use in experiments.
+Pass verify=true to verify, false to unverify. Default (system) probes cannot be verified or unverified.`;
 
 export const descCreateFromTemplate = `Create a new chaos experiment from an experiment template.
 
@@ -368,6 +395,16 @@ export const descEntityTypeFault = `Fault entity type filter.`;
 export const descPermissionsRequiredEnum = `Filter by permissions required: 'Basic' or 'Advanced'.`;
 export const descOnlyTemplatisedFaults = `When true, return only faults that have associated templates. Defaults to false.`;
 
+// Experiment list filter fields
+
+export const descSearchExperiments = `Search experiments by name (case-insensitive).`;
+export const descExperimentStatus = `Filter by last run status. Values: Running, Completed, Completed_With_Error, Completed_With_Probe_Failure, Stopped, Skipped, Error, Timeout, NA, Queued, Blocked.`;
+export const descExperimentInfraId = `Filter experiments by infrastructure ID.`;
+export const descExperimentInfraActive = `Filter by infrastructure active state: true = active infra only, false = inactive only.`;
+export const descExperimentIds = `Comma-separated experiment IDs for bulk lookup (e.g. "id1,id2,id3").`;
+export const descExperimentStartDate = `Filter by start date (Unix milliseconds, e.g. "1711324800000"). Must be used together with end_date.`;
+export const descExperimentEndDate = `Filter by end date (Unix milliseconds, e.g. "1711324800000"). Must be used together with start_date.`;
+
 // K8s infrastructure fields
 
 export const descEnvironmentId = `Environment identifier. Use chaos_environment list to find available environment IDs.`;
@@ -400,6 +437,18 @@ Requires at least one of experiment_run_ids or notify_ids. Supports list (POST) 
 
 // ── New Operation Descriptions ───────────────────────────────────────
 
+export const descDeleteExperiment = `Permanently delete a chaos experiment and all its associated data.
+
+IRREVERSIBLE: deletes run history, resiliency scores, probes, schedules, and input sets. Cannot be undone.
+
+REQUIRED pre-call workflow:
+1. Fetch the experiment via harness_get and display: name, identity, total runs, last run status, and last run date.
+2. Ask the user: "Are you sure you want to permanently delete experiment '[name]'? This cannot be undone."
+3. Do NOT proceed unless the user explicitly confirms using the experiment name (not just "yes").
+4. If the user seems unsure, suggest archiving or disabling instead of deleting.
+
+Returns experimentId, experimentName, isDeleted.`;
+
 export const descStopExperiment = `Stop a chaos experiment run.
 If notify_id is set, the run is found by notify_id and scope; otherwise by experiment_run_id and scope.
 If both are omitted, all runs for the experiment with phase 'Running' are stopped.
@@ -409,8 +458,22 @@ export const descGetProbeManifest = `Get the YAML manifest for a chaos probe by 
 Returns a JSON object with a 'manifest' field containing the raw YAML string.
 Use when you need the engine-compatible YAML definition; use get for structured JSON with parsed fields.`;
 
-export const descDeleteProbe = `Delete a chaos probe by its ID.
-The probe must be disabled first (use enable action) and must not be in use by any experiment. Default probes cannot be deleted.
+export const descDeleteProbe = `Permanently delete a chaos probe by its ID.
+
+IRREVERSIBLE: deletes the probe definition, all execution history, and reference data. Cannot be undone.
+
+PREREQUISITES:
+- The probe must be disabled first — use chaos_probe execute action: enable with is_enabled=false.
+- Use is_bulk_update=true to also remove the probe from all experiment manifests.
+- The probe must not be referenced by any experiment. Default (system) probes cannot be deleted.
+
+REQUIRED pre-call workflow:
+1. Fetch the probe via harness_get and display: name, ID, type, infrastructure type, enabled status, verified status, and reference count.
+2. If the probe is still enabled, disable it first (chaos_probe execute action: enable with is_enabled=false, is_bulk_update=true).
+3. Ask the user: "Are you sure you want to permanently delete probe '[name]'? This cannot be undone."
+4. Do NOT proceed unless the user explicitly confirms using the probe name (not just "yes").
+5. If the user seems unsure, suggest disabling instead of deleting.
+
 Returns {"response": true} on success.`;
 
 export const descListProbesInRun = `Get probe execution details for one or more experiment runs.
