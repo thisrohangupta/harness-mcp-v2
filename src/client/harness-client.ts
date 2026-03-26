@@ -83,16 +83,18 @@ export class HarnessClient {
     const method = options.method ?? "GET";
     const url = this.buildUrl(options);
     const isFme = options.product === "fme";
-    // Only inject x-api-key when the caller hasn't provided Authorization.
-    // When service-routing handles auth (bearer-jwt, remote-mcp), it sets
-    // Authorization directly — sending x-api-key alongside would cause
-    // downstream services to attempt API-key validation on the dummy token.
-    const callerHandlesAuth = !!options.headers?.["Authorization"];
     const headers: Record<string, string> = {
-      ...(callerHandlesAuth ? {} : { "x-api-key": this.token }),
       "Harness-Account": this.accountId,
       ...options.headers,
     };
+
+    // Only inject x-api-key when the caller hasn't already set auth.
+    // When service-routing handles auth (bearer-jwt, remote-mcp), it sets
+    // Authorization directly — sending x-api-key alongside would cause
+    // downstream services to attempt API-key validation on the dummy token.
+    if (!headers["Authorization"] && !headers["x-api-key"]) {
+      headers["x-api-key"] = this.token;
+    }
 
     if (options.body) {
       if (typeof options.body === "string") {
@@ -239,13 +241,15 @@ export class HarnessClient {
     const method = options.method ?? "POST";
     const url = this.buildUrl(options);
     const isFme = options.product === "fme";
-    // Same auth-header guard as request() — see comment there.
-    const callerHandlesAuth = !!options.headers?.["Authorization"];
     const headers: Record<string, string> = {
-      ...(callerHandlesAuth ? {} : { "x-api-key": this.token }),
       "Harness-Account": this.accountId,
       ...options.headers,
     };
+
+    // Same auth-header guard as request() — see comment there.
+    if (!headers["Authorization"] && !headers["x-api-key"]) {
+      headers["x-api-key"] = this.token;
+    }
 
     if (options.body) {
       if (typeof options.body === "string") {
