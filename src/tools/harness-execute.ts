@@ -9,6 +9,7 @@ import { createLogger } from "../utils/logger.js";
 import { applyUrlDefaults } from "../utils/url-parser.js";
 import { asRecord, asString } from "../utils/type-guards.js";
 import { isFlatKeyValueInputs, resolveRuntimeInputs, type ResolutionResult } from "../utils/runtime-input-resolver.js";
+import { pollExecutionToCompletion } from "../utils/execution-poller.js";
 
 const log = createLogger("execute");
 
@@ -28,6 +29,9 @@ export function registerExecuteTool(server: McpServer, registry: Registry, clien
         input_set_ids: z.array(z.string()).describe("Input set IDs for complex pipelines. List available: harness_list(resource_type='input_set', filters={pipeline_id: '...'}).").optional(),
         body: z.record(z.string(), z.unknown()).describe("Additional body payload for the action").optional(),
         params: z.record(z.string(), z.unknown()).describe("Action-specific parameters. Call harness_describe for available fields per resource_type.").optional(),
+        wait: z.boolean().describe("Wait for pipeline execution to complete. Polls status and sends progress updates. Only applies to pipeline run/retry actions.").default(false).optional(),
+        poll_interval_sec: z.number().min(5).max(60).describe("Polling interval in seconds when wait=true (default: 10s, min: 5s, max: 60s)").default(10).optional(),
+        timeout_min: z.number().min(1).max(120).describe("Maximum wait time in minutes when wait=true (default: 30min, max: 120min)").default(30).optional(),
       },
       annotations: {
         title: "Execute Harness Action",
@@ -37,7 +41,7 @@ export function registerExecuteTool(server: McpServer, registry: Registry, clien
         openWorldHint: true,
       },
     },
-    async (args) => {
+    async (args, extra) => {
       try {
         const { params, ...rest } = args;
         const input = applyUrlDefaults(rest as Record<string, unknown>, args.url);
@@ -164,6 +168,81 @@ export function registerExecuteTool(server: McpServer, registry: Registry, clien
             return jsonResult({ ...(asRecord(result) ?? {}), _note: "Retry was not available (405). Executed a fresh pipeline run instead." });
           }
           throw err;
+        }
+
+        // Wait for pipeline execution to complete if requested
+        if (
+          args.wait &&
+          resourceType === "pipeline" &&
+          (args.action === "run" || args.action === "retry")
+        ) {
+          const resultRecord = asRecord(result);
+          const planExecution = asRecord(resultRecord?.planExecution);
+          const executionId = asString(planExecution?.uuid) ??
+                             asString(resultRecord?.executionId) ??
+                             asString(resultRecord?.planExecutionId);
+
+          if (!executionId) {
+            log.warn("wait=true requested but execution_id not found in response", { result });
+            // Fall through to return the result as-is
+          } else {
+            log.info("Polling execution to completion", {
+              executionId,
+              pollInterval: args.poll_interval_sec,
+              timeout: args.timeout_min,
+            });
+
+            try {
+              const orgId = asString(input.org_id) ?? registry.defaultOrgId;
+              const projectId = asString(input.project_id) ?? registry.defaultProjectId ?? "";
+
+              const finalStatus = await pollExecutionToCompletion(client, registry, {
+                executionId,
+                orgId,
+                projectId,
+                pollIntervalMs: (args.poll_interval_sec ?? 10) * 1000,
+                timeoutMs: (args.timeout_min ?? 30) * 60 * 1000,
+                extra,
+                signal: extra.signal,
+              });
+
+              // Return the final execution state instead of the initial response
+              const finalResult = {
+                execution_id: finalStatus.executionId,
+                pipeline_id: finalStatus.pipelineIdentifier,
+                status: finalStatus.status,
+                name: finalStatus.name,
+                started_at: finalStatus.startTs ? new Date(finalStatus.startTs).toISOString() : undefined,
+                ended_at: finalStatus.endTs ? new Date(finalStatus.endTs).toISOString() : undefined,
+                duration_seconds: finalStatus.endTs && finalStatus.startTs
+                  ? Math.round((finalStatus.endTs - finalStatus.startTs) / 1000)
+                  : undefined,
+                ...(finalStatus.failureInfo ? { failure_reason: finalStatus.failureInfo } : {}),
+                _waited: true,
+              };
+
+              if (resolved) {
+                return jsonResult({
+                  ...finalResult,
+                  _inputResolution: {
+                    mode: hasInputSets ? "input_set_with_overrides" : "auto_resolved",
+                    matched: resolved.matched,
+                    ...(resolved.unmatchedOptional.length > 0 ? { defaulted: resolved.unmatchedOptional } : {}),
+                  },
+                });
+              }
+
+              return jsonResult(finalResult);
+            } catch (pollErr) {
+              log.error("Execution polling failed", { error: String(pollErr) });
+              // Return original result with polling error note
+              return jsonResult({
+                ...(resultRecord ?? {}),
+                _pollingError: pollErr instanceof Error ? pollErr.message : String(pollErr),
+                _note: "Pipeline was started successfully but polling failed. Check execution status manually.",
+              });
+            }
+          }
         }
 
         if (resolved) {
