@@ -2,14 +2,16 @@
 
 ## Overview
 
-The `harness_execute` tool now supports waiting for pipeline executions to complete via the `wait` parameter. When enabled, the tool will:
+The `harness_execute` tool supports **synchronous waiting** for pipeline executions via the `wait` parameter. When enabled, the tool will:
 
 1. Execute the pipeline (run/retry action)
 2. Poll the execution status at regular intervals
 3. Send MCP progress notifications during polling
 4. Return the final execution state when complete (Success, Failed, etc.)
 
-This enables the "kick off pipeline, keep coding, get notified on completion" workflow without manual polling or separate monitoring tools.
+**Important:** `wait=true` **blocks the tool call** until completion. This is perfect for quick pipelines (<5min) or automation scripts.
+
+**For long pipelines** where you want to "keep coding" while monitoring, use `wait=false` (default) and let your AI assistant spawn a background monitoring agent instead. See [When NOT to Use wait=true](#when-not-to-use-waittrue) for details.
 
 ## Parameters
 
@@ -228,37 +230,110 @@ On failure:
   )
 ```
 
+## When NOT to Use wait=true
+
+### The "Keep Coding" Use Case
+
+If you want to **continue working while a pipeline runs**, `wait=true` is **not the right approach** because it blocks the tool call.
+
+Instead, use the **async agent-based monitoring pattern** that Claude Code and other AI assistants support natively:
+
+#### Async Monitoring Pattern (Recommended for Long Pipelines)
+
+```
+User: "Run the deploy pipeline and let me know when it finishes"
+
+Claude's workflow:
+1. Call harness_execute(wait=false) → returns execution_id immediately
+2. Spawn a background agent to monitor the execution
+3. Return to user: "Deploy pipeline started (exec-123), monitoring in background"
+4. User continues coding, asking questions, working with Claude
+5. Background agent polls harness_get(resource_type="execution") every 30-60s
+6. Agent notifies user when pipeline completes or fails
+
+No MCP server changes needed - this works today!
+```
+
+#### Example Conversation
+
+```
+User: "Start the integration tests and keep me posted"
+
+Claude:
+  → harness_execute(action="run", pipeline_id="integration-tests", wait=false)
+  → Returns: { execution_id: "exec-abc123", ... }
+  → Spawns background agent to monitor exec-abc123
+  → "Integration tests started (exec-abc123). I'll monitor and notify you."
+
+User: "Great. Now help me debug this authentication issue..."
+
+Claude: [Helps with debugging while agent monitors in background]
+
+[5 minutes later]
+Background Agent: "Integration tests completed successfully in 4m 32s"
+```
+
+### Why Async Monitoring > wait=true for Long Pipelines
+
+| Aspect | wait=true | Async Agent Monitoring |
+|--------|-----------|------------------------|
+| **Availability** | ❌ Claude blocked during execution | ✅ Claude available for other work |
+| **User Experience** | ❌ Must wait for response | ✅ Continue coding immediately |
+| **Multiple Pipelines** | ❌ One at a time | ✅ Monitor multiple concurrently |
+| **Timeout Risk** | ❌ Fails if pipeline > timeout | ✅ Agent can wait indefinitely |
+| **Progress Updates** | ✅ MCP progress notifications | ⚠️ Periodic status checks |
+
+**Use async monitoring when:**
+- Pipeline takes > 5 minutes
+- You want to continue working
+- Monitoring multiple executions
+- Pipeline duration is unpredictable
+
+**Use wait=true when:**
+- Pipeline takes < 5 minutes
+- You want immediate results
+- Single-task focus is acceptable
+- Automation/scripting context
+
 ## Comparison with Alternatives
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **wait=true** | • Built-in, no external setup<br>• MCP progress updates<br>• Works across all MCP clients | • Blocks the tool call<br>• Single execution at a time |
-| **Manual polling** | • Non-blocking<br>• Full control | • Requires multiple tool calls<br>• No progress updates<br>• More complex |
-| **VS Code extension** | • Real-time notifications<br>• IDE integration | • Requires extension installation<br>• Only works in VS Code |
-| **Skill/Agent** | • Background monitoring<br>• Multiple executions | • Requires Claude Code<br>• More setup |
+| Approach | Pros | Cons | Best For |
+|----------|------|------|----------|
+| **wait=true (Sync)** | • Simple one-call solution<br>• MCP progress updates<br>• Final status guaranteed | • Blocks Claude/AI<br>• Single execution<br>• Timeout limits | Quick tests, automation, <5min pipelines |
+| **Agent Monitoring (Async)** | • Non-blocking<br>• Monitor multiple<br>• Continue working | • Requires AI support<br>• Less precise progress | Long pipelines, "keep coding" workflow |
+| **Manual Polling** | • Full control<br>• Works everywhere | • Complex (multiple calls)<br>• No auto-notification | Advanced users, custom integrations |
+| **VS Code Extension** | • Real-time UI updates<br>• IDE integration | • Extension required<br>• VS Code only | Deep IDE integration needs |
 
 ## Best Practices
 
-1. **Use wait=true for:**
-   - Short pipelines (< 10 minutes)
-   - Critical deployments you want to monitor
-   - Workflows that need immediate feedback
+### Choosing the Right Pattern
 
-2. **Don't use wait=true for:**
-   - Long-running pipelines (> 30 minutes)
-   - Batch executions (fire and forget)
-   - When you need to start multiple pipelines in parallel
+1. **Use wait=true (Synchronous) for:**
+   - Quick tests and builds (< 5 minutes)
+   - Automation scripts where blocking is acceptable
+   - Single-task focus workflows
+   - When you want guaranteed final status in one call
+   - Example: "Run unit tests and show me failures"
 
-3. **Set appropriate timeouts:**
-   - Short builds: `timeout_min=5`
-   - Normal deploys: `timeout_min=15`
-   - Complex workflows: `timeout_min=45`
-   - Long migrations: `timeout_min=120`
+2. **Use Agent Monitoring (Async) for:**
+   - Long-running pipelines (> 5 minutes)
+   - When you want to continue coding during execution
+   - Monitoring multiple pipelines concurrently
+   - Unpredictable duration pipelines
+   - Example: "Deploy to staging and let me know when done"
 
-4. **Adjust polling interval:**
+3. **Set appropriate timeouts (when using wait=true):**
+   - Quick tests: `timeout_min=5`
+   - Standard builds: `timeout_min=15`
+   - Full deployments: `timeout_min=30`
+   - Complex workflows: `timeout_min=60`
+   - Note: Longer timeouts = longer Claude is blocked
+
+4. **Adjust polling interval (when using wait=true):**
    - Fast pipelines (< 2min): `poll_interval_sec=5`
    - Normal pipelines: `poll_interval_sec=10` (default)
    - Long pipelines: `poll_interval_sec=30`
+   - Lower intervals = more API calls but better progress updates
 
 ## Troubleshooting
 

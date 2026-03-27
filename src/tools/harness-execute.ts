@@ -29,7 +29,7 @@ export function registerExecuteTool(server: McpServer, registry: Registry, clien
         input_set_ids: z.array(z.string()).describe("Input set IDs for complex pipelines. List available: harness_list(resource_type='input_set', filters={pipeline_id: '...'}).").optional(),
         body: z.record(z.string(), z.unknown()).describe("Additional body payload for the action").optional(),
         params: z.record(z.string(), z.unknown()).describe("Action-specific parameters. Call harness_describe for available fields per resource_type.").optional(),
-        wait: z.boolean().describe("Wait for pipeline execution to complete. Polls status and sends progress updates. Only applies to pipeline run/retry actions.").default(false).optional(),
+        wait: z.boolean().describe("Wait synchronously for pipeline execution to complete (blocks tool call). Best for quick pipelines (<5min) or when immediate results needed. For long pipelines while continuing other work, use wait=false and spawn a monitoring agent instead.").default(false).optional(),
         poll_interval_sec: z.number().min(5).max(60).describe("Polling interval in seconds when wait=true (default: 10s, min: 5s, max: 60s)").default(10).optional(),
         timeout_min: z.number().min(1).max(120).describe("Maximum wait time in minutes when wait=true (default: 30min, max: 120min)").default(30).optional(),
       },
