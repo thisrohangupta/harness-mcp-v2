@@ -43,7 +43,7 @@ import {
   descGetFaultVariables, descGetFaultYaml, descListFaultExperimentRuns, descDeleteFault,
   descListActions, descGetAction, descGetActionManifest, descDeleteAction,
   // Action descriptions
-  descRunExperiment, descStopExperiment,
+  descRunExperiment, descStopExperiment, descDeleteExperiment,
   descEnableProbe, descVerifyProbe,
   descCreateFromTemplate,
   descListRevisions, descGetVariables, descGetYaml, descCompareRevisions,
@@ -84,6 +84,10 @@ import {
   descActionIdentityParam, descSearchActionsParam, descHubIdentityActions,
   descExperimentVariablesParam, descTasksParam,
   descEnvironmentIdCreate, descInfraIdCreate,
+  descSearchExperiments, descExperimentStatus, descExperimentInfraId,
+  descExperimentInfraActive, descExperimentIds,
+  descExperimentStartDate, descExperimentEndDate,
+  descSearchProbes, descProbeIds, descProbeSortField,
 } from "./chaos-descriptions.js";
 
 /**
@@ -114,6 +118,18 @@ export const chaosToolset: ToolsetDefinition = {
       scopeParams: CHAOS_SCOPE,
       identifierFields: ["experiment_id"],
       deepLinkTemplate: "/ng/account/{accountId}/all/orgs/{orgIdentifier}/projects/{projectIdentifier}/chaos/experiments/{experimentId}",
+      listFilterFields: [
+        { name: "experiment_name", description: descSearchExperiments },
+        { name: "status", description: descExperimentStatus },
+        { name: "infra_id", description: descExperimentInfraId },
+        { name: "infra_name", description: descSearchK8sInfra },
+        { name: "infra_active", description: descExperimentInfraActive, type: "boolean" as const },
+        { name: "tags", description: descTags },
+        { name: "experiment_ids", description: descExperimentIds },
+        { name: "environment_id", description: descEnvironmentId },
+        { name: "start_date", description: descExperimentStartDate },
+        { name: "end_date", description: descExperimentEndDate },
+      ],
       operations: {
         list: {
           method: "GET",
@@ -121,6 +137,16 @@ export const chaosToolset: ToolsetDefinition = {
           queryParams: {
             page: "page",
             limit: "limit",
+            experiment_name: "experimentName",
+            status: "status",
+            infra_id: "infraId",
+            infra_name: "infraName",
+            infra_active: "infraActive",
+            tags: "tags",
+            experiment_ids: "experimentIds",
+            environment_id: "environmentIdentifier",
+            start_date: "startDate",
+            end_date: "endDate",
           },
           responseExtractor: chaosPageExtract,
           description: descListExperiments,
@@ -131,6 +157,13 @@ export const chaosToolset: ToolsetDefinition = {
           pathParams: { experiment_id: "experimentId" },
           responseExtractor: passthrough,
           description: descGetExperiment,
+        },
+        delete: {
+          method: "DELETE",
+          path: `${CHAOS}/rest/v2/experiment/{experimentId}`,
+          pathParams: { experiment_id: "experimentId" },
+          responseExtractor: passthrough,
+          description: descDeleteExperiment,
         },
       },
       executeActions: {
@@ -203,7 +236,7 @@ export const chaosToolset: ToolsetDefinition = {
       },
     },
 
-    // ── Chaos Experiment Run ───────────────────────────────────────────
+    // ── Chaos Experiment Run - Gives the status of an experiment run. (It doesn't start a run) ───────────────────────────────────────────
     {
       resourceType: "chaos_experiment_run",
       displayName: "Chaos Experiment Run",
@@ -218,7 +251,7 @@ export const chaosToolset: ToolsetDefinition = {
           method: "GET",
           path: `${CHAOS}/rest/v2/chaos-pipeline/{experimentId}`,
           pathParams: { experiment_id: "experimentId" },
-          queryParams: { run_id: "experimentRunId" },
+          queryParams: { run_id: "experimentRunId", notify_id: "notifyId" },
           responseExtractor: passthrough,
           description: descGetExperimentRun,
         },
@@ -234,6 +267,17 @@ export const chaosToolset: ToolsetDefinition = {
       scope: "project",
       scopeParams: CHAOS_SCOPE,
       identifierFields: ["probe_id"],
+      listFilterFields: [
+        { name: "search", description: descSearchProbes },
+        { name: "tags", description: descTags },
+        { name: "start_date", description: descExperimentStartDate },
+        { name: "end_date", description: descExperimentEndDate },
+        { name: "probe_ids", description: descProbeIds },
+        { name: "infra_type", description: descInfraType },
+        { name: "sort_field", description: descProbeSortField },
+        { name: "sort_ascending", description: descSortAsc, type: "boolean" as const },
+        { name: "entity_type", description: descEntityTypeProbe },
+      ],
       operations: {
         list: {
           method: "GET",
@@ -241,6 +285,15 @@ export const chaosToolset: ToolsetDefinition = {
           queryParams: {
             page: "page",
             limit: "limit",
+            search: "search",
+            tags: "tags",
+            start_date: "startDate",
+            end_date: "endDate",
+            probe_ids: "probeIDs",
+            infra_type: "infraType",
+            sort_field: "sortField",
+            sort_ascending: "sortAscending",
+            entity_type: "entityType",
           },
           responseExtractor: chaosProbeListExtract,
           description: descListProbes,
