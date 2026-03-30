@@ -9,7 +9,7 @@ const TIMESTAMP_PATTERN = /(?:At|Ts|Time|Date)$/;
 /** Fields to always keep when compacting list items. */
 const IDENTITY_FIELDS = new Set([
   "identifier", "name", "displayName", "description", "slug",
-  "versionLabel", "sha", "title", "message",
+  "versionLabel", "sha", "title", "message", "response", "answer", "sources",
 ]);
 
 const STATUS_FIELDS = new Set([

@@ -35,6 +35,7 @@ import { visualizationsToolset } from "./toolsets/visualizations.js";
 import { governanceToolset } from "./toolsets/governance.js";
 import { freezeToolset } from "./toolsets/freeze.js";
 import { overridesToolset } from "./toolsets/overrides.js";
+import { documentationToolset } from "./toolsets/documentation.js";
 
 const log = createLogger("registry");
 
@@ -73,6 +74,7 @@ const ALL_TOOLSETS: ToolsetDefinition[] = [
   governanceToolset,
   freezeToolset,
   overridesToolset,
+  documentationToolset,
 ];
 
 /**
@@ -380,7 +382,16 @@ export class Registry {
     // Make request — resolve base URL and auth from product backend
     const product = def.product ?? "harness";
     const baseUrl = resolveProductBaseUrl(this.config, product);
-    const productHeaders: Record<string, string> = { ...spec.headers };
+    if (product === "chatbot" && !baseUrl) {
+      throw new Error(
+        "HARNESS_CHATBOT_BASE_URL is not configured. " +
+        "Set this environment variable to the documentation chatbot endpoint URL to use documentation queries."
+      );
+    }
+    const productHeaders: Record<string, string> = {
+      ...spec.headers,
+      ...(spec.headersBuilder ? spec.headersBuilder(input) : {}),
+    };
     if (product === "fme") {
       productHeaders["Authorization"] = `Bearer ${this.config.HARNESS_API_KEY}`;
     }
