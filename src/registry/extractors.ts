@@ -234,6 +234,13 @@ export const chaosInfraListExtract = (raw: unknown): { items: unknown[]; total: 
   };
 };
 
+/** Extract chaos DR test list response: { drtests: [...] } */
+export const chaosDRTestListExtract = (raw: unknown): { items: unknown[]; total: number } => {
+  const r = raw as { drtests?: unknown[] };
+  const items = r.drtests ?? [];
+  return { items, total: items.length };
+};
+
 // ---------------------------------------------------------------------------
 // Feature Management Enterprise (FME) extractors
 // ---------------------------------------------------------------------------

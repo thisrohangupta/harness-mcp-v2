@@ -4,6 +4,7 @@ import {
   chaosPageExtract,
   chaosProbeListExtract,
   chaosInfraListExtract,
+  chaosDRTestListExtract,
 } from "../extractors.js";
 import {
   descToolsetChaos,
@@ -18,6 +19,7 @@ import {
   descChaosGuardCondition, descChaosGuardRule,
   descChaosRecommendation, descChaosRisk,
   descChaosAction, descChaosProbeInRun,
+  descChaosDRTest,
   // Operation descriptions
   descListExperiments, descGetExperiment,
   descGetExperimentRun,
@@ -38,6 +40,7 @@ import {
   descListGuardRules, descGetGuardRule, descDeleteGuardRule,
   descListRecommendations, descGetRecommendation,
   descListRisks, descGetRisk,
+  descListDRTests,
   descDeleteProbe, descGetProbeManifest,
   descListProbesInRun,
   descGetFaultVariables, descGetFaultYaml, descListFaultExperimentRuns, descDeleteFault,
@@ -84,10 +87,10 @@ import {
   descActionIdentityParam, descSearchActionsParam, descHubIdentityActions,
   descExperimentVariablesParam, descTasksParam,
   descEnvironmentIdCreate, descInfraIdCreate,
-  descSearchExperiments, descExperimentStatus, descExperimentInfraId,
-  descExperimentInfraActive, descExperimentIds,
+  descSearchExperiments, descExperimentInfraId, descExperimentIds,
   descExperimentStartDate, descExperimentEndDate,
   descSearchProbes, descProbeIds, descProbeSortField,
+  descDRTestSort,
 } from "./chaos-descriptions.js";
 
 /**
@@ -118,12 +121,12 @@ export const chaosToolset: ToolsetDefinition = {
       scopeParams: CHAOS_SCOPE,
       identifierFields: ["experiment_id"],
       deepLinkTemplate: "/ng/account/{accountId}/all/orgs/{orgIdentifier}/projects/{projectIdentifier}/chaos/experiments/{experimentId}",
+      // NOTE: hce-saas backend parses infraName, status, and infraActive query params
+      // but never applies them in the MongoDB aggregation pipeline (repository.go ListChaosV2Experiments).
+      // These filters are intentionally omitted here until the backend is fixed.
       listFilterFields: [
         { name: "experiment_name", description: descSearchExperiments },
-        { name: "status", description: descExperimentStatus },
         { name: "infra_id", description: descExperimentInfraId },
-        { name: "infra_name", description: descSearchK8sInfra },
-        { name: "infra_active", description: descExperimentInfraActive, type: "boolean" as const },
         { name: "tags", description: descTags },
         { name: "experiment_ids", description: descExperimentIds },
         { name: "environment_id", description: descEnvironmentId },
@@ -138,10 +141,7 @@ export const chaosToolset: ToolsetDefinition = {
             page: "page",
             limit: "limit",
             experiment_name: "experimentName",
-            status: "status",
             infra_id: "infraId",
-            infra_name: "infraName",
-            infra_active: "infraActive",
             tags: "tags",
             experiment_ids: "experimentIds",
             environment_id: "environmentIdentifier",
@@ -223,15 +223,6 @@ export const chaosToolset: ToolsetDefinition = {
           bodyBuilder: () => ({}),
           responseExtractor: passthrough,
           actionDescription: descStopExperiment,
-          bodySchema: {
-            description: "No body required. Experiment identified by path parameter; optional run/notify IDs and force flag via query params.",
-            fields: [
-              { name: "experiment_id", type: "string", required: true, description: descExperimentId },
-              { name: "experiment_run_id", type: "string", required: false, description: descExperimentRunIdStop },
-              { name: "notify_id", type: "string", required: false, description: descNotifyId },
-              { name: "force", type: "boolean", required: false, description: descForce },
-            ],
-          },
         },
       },
     },
@@ -244,7 +235,7 @@ export const chaosToolset: ToolsetDefinition = {
       toolset: "chaos",
       scope: "project",
       scopeParams: CHAOS_SCOPE,
-      identifierFields: ["experiment_id", "run_id"],
+      identifierFields: ["experiment_id"],
       deepLinkTemplate: "/ng/account/{accountId}/all/orgs/{orgIdentifier}/projects/{projectIdentifier}/chaos/experiments/{experimentId}",
       operations: {
         get: {
@@ -316,7 +307,7 @@ export const chaosToolset: ToolsetDefinition = {
       executeActions: {
         enable: {
           method: "POST",
-          path: `${CHAOS}/rest/v2/probes/enable/{probeId}`,
+          path: `${CHAOS}/rest/v2/probes/{probeId}/enable`,
           pathParams: { probe_id: "probeId" },
           bodyBuilder: (input) => ({
             isEnabled: input.is_enabled ?? true,
@@ -334,7 +325,7 @@ export const chaosToolset: ToolsetDefinition = {
         },
         verify: {
           method: "POST",
-          path: `${CHAOS}/rest/v2/probes/verify/{probeId}`,
+          path: `${CHAOS}/rest/v2/probes/{probeId}/verify`,
           pathParams: { probe_id: "probeId" },
           bodyBuilder: (input) => ({
             verify: input.verify ?? true,
@@ -1677,6 +1668,39 @@ export const chaosToolset: ToolsetDefinition = {
           pathParams: { risk_id: "riskId" },
           responseExtractor: passthrough,
           description: descGetRisk,
+        },
+      },
+    },
+
+    // ── Chaos DR Tests ────────────────────────────────────────────────
+    {
+      resourceType: "chaos_dr_test",
+      displayName: "Chaos DR Test",
+      description: descChaosDRTest,
+      toolset: "chaos",
+      scope: "project",
+      scopeParams: CHAOS_SCOPE,
+      identifierFields: ["dr_test_id"],
+      listFilterFields: [
+        { name: "sort", description: descDRTestSort },
+      ],
+      diagnosticHint: "If the list returns empty, verify that: (1) pipelines exist in the project with tag module=drtest, (2) those pipelines contain at least one stage of type DRTest, and (3) the org/project identifiers are correct.",
+      operations: {
+        list: {
+          method: "GET",
+          path: `${CHAOS}/v3/dr-tests`,
+          queryParams: {
+            page: "page",
+            limit: "limit",
+            size: "limit",
+            sort: "sort",
+          },
+          defaultQueryParams: {
+            sort: "lastModified,DESC",
+            limit: "15",
+          },
+          responseExtractor: chaosDRTestListExtract,
+          description: descListDRTests,
         },
       },
     },

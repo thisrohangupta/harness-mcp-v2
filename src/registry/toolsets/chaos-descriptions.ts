@@ -1,6 +1,6 @@
 // ── Toolset ──────────────────────────────────────────────────────────
 
-export const descToolsetChaos = `Harness Chaos Engineering — run/stop/govern chaos experiments; manage probes, faults (Kubernetes, AWS, Azure, GCP, Linux), actions, hubs, and templates (experiment, fault, probe, action); inspect experiment runs and resiliency scores; configure Kubernetes and Linux infrastructure and environments; visualize blast radius via network maps; enforce governance via ChaosGuard rules/conditions; analyze recommendations and risks; run load tests`;
+export const descToolsetChaos = `Harness Chaos Engineering — run/stop/govern chaos experiments; manage probes, faults (Kubernetes, AWS, Azure, GCP, Linux), actions, hubs, and templates (experiment, fault, probe, action); inspect experiment runs and resiliency scores; configure Kubernetes and Linux infrastructure and environments; visualize blast radius via network maps; enforce governance via ChaosGuard rules/conditions; analyze recommendations and risks; run load tests; list disaster recovery (DR) tests`;
 
 // ── Resource Descriptions ────────────────────────────────────────────
 
@@ -10,7 +10,7 @@ export const descChaosExperimentRun = `Experiment run timeline — full snapshot
 Returns the execution pipeline with individual nodes (faults, probes, actions), each with status, timing, and chaos data.
 Also returns experiment metadata, infra details, calculated resiliency score, manifest version, and run sequence.
 This is a read-only endpoint — it does NOT start a run. To trigger a run, use chaos_experiment execute action: run.
-Requires experiment_id plus either run_id (experimentRunId) or notify_id (for pipeline-triggered runs).
+Pass experiment_id via resource_id. Pass run_id or notify_id via params to identify the specific run.
 Supports get.`;
 
 export const descChaosProbe = `Chaos resilience probe — declarative health checker that monitors application health before, during, and after a fault and determines the fault outcome.
@@ -92,7 +92,7 @@ export const descGetExperiment = `Get chaos experiment details including revisio
 export const descGetExperimentRun = `Get the full timeline of a chaos experiment run. This is a read-only endpoint — it does NOT trigger a run.
 Returns the execution pipeline: individual fault/probe/action nodes with status, timing, chaos data, and error details.
 Also returns experiment name, infraID, resiliency score, run phase, manifest version, and template details.
-Requires experiment_id; pass run_id (experimentRunId) or notify_id (pipeline-triggered) to identify the specific run.
+Pass experiment_id via resource_id. Pass run_id or notify_id via params (not resource_id) to identify the specific run.
 To start a new run, use chaos_experiment execute action: run instead.`;
 
 export const descListProbes = `List chaos probes with optional filtering.
@@ -431,9 +431,10 @@ export const descChaosAction = `Chaos action — a reusable step (delay, custom 
 Supports list, get, delete, and get_manifest execute action.
 Returns identity, name, type, infrastructureType, actionProperties, variables, and audit info.`;
 
-export const descChaosProbeInRun = `Probe execution details within one or more chaos experiment runs.
-Returns probe status, mode, fault association, and configuration for each probe that participated in the specified runs.
-Requires at least one of experiment_run_ids or notify_ids. Supports list (POST) only.`;
+export const descChaosProbeInRun = `Probe execution results within one or more chaos experiment runs — the primary way to check which probes ran and whether they passed or failed.
+Returns per-probe: probeId, name, type, mode, status (verdict), experimentId, experimentRunId, notifyId, experimentName, faultName, nodeName, isExperimentLevelProbe, probeDetails, and probeYaml.
+Provide experiment_run_ids OR notify_ids (or both). If both are provided, results are the AND intersection — only runs matching both.
+Supports list (POST) only.`;
 
 // ── New Operation Descriptions ───────────────────────────────────────
 
@@ -450,8 +451,10 @@ REQUIRED pre-call workflow:
 Returns experimentId, experimentName, isDeleted.`;
 
 export const descStopExperiment = `Stop a chaos experiment run.
+Pass experiment_id via resource_id. Pass experiment_run_id, notify_id, force via params (not inputs).
 If notify_id is set, the run is found by notify_id and scope; otherwise by experiment_run_id and scope.
 If both are omitted, all runs for the experiment with phase 'Running' are stopped.
+force=true immediately marks the run as Stopped in the database; false (default) requests stop on cluster/machine.
 Returns isStopped, experimentId, and experimentName.`;
 
 export const descGetProbeManifest = `Get the YAML manifest for a chaos probe by its ID (compatible with chaos engine).
@@ -463,9 +466,9 @@ export const descDeleteProbe = `Permanently delete a chaos probe by its ID.
 IRREVERSIBLE: deletes the probe definition, all execution history, and reference data. Cannot be undone.
 
 PREREQUISITES:
-- The probe must be disabled first — use chaos_probe execute action: enable with is_enabled=false.
-- Use is_bulk_update=true to also remove the probe from all experiment manifests.
+- The probe must be disabled first — use chaos_probe execute action: enable with is_enabled=false and is_bulk_update=true to also remove it from all experiment manifests.
 - The probe must not be referenced by any experiment. Default (system) probes cannot be deleted.
+- The delete call itself takes no extra parameters beyond probe_id.
 
 REQUIRED pre-call workflow:
 1. Fetch the probe via harness_get and display: name, ID, type, infrastructure type, enabled status, verified status, and reference count.
@@ -476,9 +479,11 @@ REQUIRED pre-call workflow:
 
 Returns {"response": true} on success.`;
 
-export const descListProbesInRun = `Get probe execution details for one or more experiment runs.
-At least one of experiment_run_ids or notify_ids must be provided.
-Returns probe status, mode, fault association, and configuration for each probe that participated in those runs.`;
+export const descListProbesInRun = `Get probe execution results for one or more experiment runs.
+Provide experiment_run_ids OR notify_ids. If only one field is given, matches any ID in that list (OR within).
+If both fields are given, results are the AND intersection — only runs matching both a notify ID and a run ID.
+Neither provided returns 400 Bad Request.
+Returns per-probe: probeId, name, type, mode, status, faultName, experimentName, probeDetails, and probeYaml.`;
 
 export const descGetFaultVariables = `Get the list of inputs and variables for a chaos fault by its identity.
 Returns four groups: variables, faultAuthentication, faultTargets, and faultTunable — each containing name, value, type, description, and whether it is required.`;
@@ -514,7 +519,8 @@ Returns {"deleted": true} on success.`;
 
 export const descBodyProbeEnable = `Probe enable/disable request body.`;
 export const descBodyProbeVerify = `Probe verify/unverify request body.`;
-export const descBodyProbesInRun = `Probe details request body. At least one of experiment_run_ids or notify_ids must be provided.`;
+export const descBodyProbesInRun = `Probe execution results request body. Provide experiment_run_ids OR notify_ids (or both).
+If both are provided, only runs matching both conditions are returned (AND intersection).`;
 
 // ── New Field Descriptions ───────────────────────────────────────────
 
@@ -524,8 +530,8 @@ export const descForce = `When true, immediately marks the run as Stopped in the
 export const descIsEnabledFlag = `True to enable the probe, false to disable.`;
 export const descIsBulkUpdate = `When true, enable/disable the probe across all experiments that use it. Defaults to false.`;
 export const descVerifyFlag = `True to verify the probe, false to unverify. Default probes cannot be verified or unverified.`;
-export const descExperimentRunIds = `List of experiment run IDs to fetch probe details for.`;
-export const descNotifyIds = `List of notify IDs to fetch probe details for.`;
+export const descExperimentRunIds = `List of experiment run IDs to fetch probe details for. Matches any run ID in the list (OR within).`;
+export const descNotifyIds = `List of notify IDs (pipeline-triggered run identifiers) to fetch probe details for. Matches any notify ID in the list (OR within).`;
 export const descFaultIdentityParam = `Unique identity of the fault. Use chaos_fault list to find fault identities.`;
 export const descIsEnterpriseFilter = `When true, filter for enterprise faults only. Defaults to false.`;
 export const descIsEnterpriseGet = `When true, get an enterprise fault. Defaults to false.`;
@@ -539,3 +545,32 @@ export const descExperimentVariablesParam = `Optional experiment variables as an
 export const descTasksParam = `Optional task-level variables as an object where each key is a task name and the value is an object with variable name-value pairs.`;
 export const descEnvironmentIdCreate = `Unique identifier for an environment. Use chaos_environment list to find environment IDs.`;
 export const descInfraIdCreate = `Unique identifier for an infrastructure. Use chaos_k8s_infrastructure or chaos_infrastructure list to find infra IDs.`;
+
+// ── DR Test Descriptions ─────────────────────────────────────────────
+
+export const descChaosDRTest = `Chaos DR Test (Disaster Recovery Test) — a DRTest-type stage inside a Harness pipeline used to validate disaster recovery readiness through chaos fault injection.
+
+Key concepts:
+- A DR Test is NOT a standalone entity — it is a stage (of type "DRTest") within a pipeline tagged module=drtest.
+- One pipeline can contain multiple DRTest stages; each stage appears as a separate DR Test.
+- The DR Test identity is the stage identifier; the parent pipeline has its own separate identity.
+- All three scope params are required: accountIdentifier, organizationIdentifier, projectIdentifier. The API is strictly project-scoped.
+
+List response fields: name, identity (stage ID), description, tags (key-value map), objective (DR goal statement), and spec.pipeline containing the parent pipeline name, identity, recentRuns (executionId, status, startTs, endTs, executorInfo), and lastModified timestamp.`;
+
+export const descListDRTests = `List all DR Tests (disaster recovery test stages) from pipelines tagged with module=drtest.
+Returns each DR Test's identity, name, description, objective, tags, and parent pipeline info with recent run statuses.
+Supports pagination (page, limit) and sorting (sort).
+
+Constraints:
+- Pagination and sort apply to the underlying pipeline list, not individual DR Test stages — a page of N pipelines may yield more or fewer DR Tests since one pipeline can contain multiple DRTest stages.
+- The response has no server-side pagination metadata; total count is derived from the returned array length.
+- recentRuns are at the pipeline level — all DRTest stages from the same pipeline share the same recent execution history.
+- Only pipelines tagged module=drtest are returned; this filter is hardcoded and not user-configurable.
+- The search parameter is accepted without error but has no effect — it is inherited from a shared query type but not wired in the backend.`;
+
+export const descDRTestSort = `Sort field and direction for the underlying pipeline list. Format: {field},{DIRECTION}.
+Valid sort fields: name (pipeline name, alphabetical), lastModified (pipeline last modification timestamp), lastExecution (pipeline most recent execution timestamp).
+Valid directions: ASC, DESC.
+Valid combinations: name,ASC | name,DESC | lastModified,ASC | lastModified,DESC | lastExecution,ASC | lastExecution,DESC.
+Default (when omitted): lastModified,DESC.`;
