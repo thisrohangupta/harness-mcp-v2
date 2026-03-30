@@ -167,19 +167,19 @@ platform:
 \`\`\`
 
 **Container image:**
-- The Claude Code plugin is packaged via this image
+- Use your org’s Harness-hosted agent image (from Harness docs or your platform team), for example:
 \`\`\`yaml
 container:
   connector: account.harnessImage
-  image: pkg.harness.io/vrvdt5ius7uwygso8s0bia/harness-agents/claude-code-plugin:main
+  image: <your-registry>/<your-org-path>/harness-agents/claude-code-plugin:<tag>
 \`\`\`
 
-**Environment variables (Bedrock configuration):**
+**Environment variables (example: Amazon Bedrock — replace with your account ARNs and secret names):**
 \`\`\`yaml
 env:
-  ANTHROPIC_MODEL: arn:aws:bedrock:us-east-1:587817102444:application-inference-profile/7p8sn93lhspw
-  AWS_BEARER_TOKEN_BEDROCK: <+secrets.getValue("bedrock_yaml_key")>
-  AWS_REGION: us-east-1
+  ANTHROPIC_MODEL: <your-bedrock-application-inference-profile-arn>
+  AWS_BEARER_TOKEN_BEDROCK: <+secrets.getValue("bedrock_api_key")>
+  AWS_REGION: <your-aws-region>
   CLAUDE_CODE_USE_BEDROCK: "1"
 \`\`\`
 
@@ -325,11 +325,11 @@ agent:
           agent:
             container:
               connector: account.harnessImage
-              image: pkg.harness.io/vrvdt5ius7uwygso8s0bia/harness-agents/claude-code-plugin:main
+              image: <your-registry>/<your-org-path>/harness-agents/claude-code-plugin:<tag>
             env:
-              ANTHROPIC_MODEL: <model-arn-profile>
+              ANTHROPIC_MODEL: <your-bedrock-application-inference-profile-arn>
               AWS_BEARER_TOKEN_BEDROCK: <+secrets.getValue("bedrock_api_key")>
-              AWS_REGION: us-east-1
+              AWS_REGION: <your-aws-region>
               CLAUDE_CODE_USE_BEDROCK: "1"
             task: |
               You are a code coverage agent. The repository has already been cloned into the current working directory. It is a Go project. If go is not installed then install the latest version of go.
@@ -369,11 +369,11 @@ agent:
           agent:
             container:
               connector: account.harnessImage
-              image: pkg.harness.io/vrvdt5ius7uwygso8s0bia/harness-agents/claude-code-plugin:main
+              image: <your-registry>/<your-org-path>/harness-agents/claude-code-plugin:<tag>
             env:
-              ANTHROPIC_MODEL: <model-arn-profile>
+              ANTHROPIC_MODEL: <your-bedrock-application-inference-profile-arn>
               AWS_BEARER_TOKEN_BEDROCK: <+secrets.getValue("bedrock_api_key")>
-              AWS_REGION: us-east-1
+              AWS_REGION: <your-aws-region>
               CLAUDE_CODE_USE_BEDROCK: "1"
             task: |
               Read PR url and info from INFO.md in the current directory.
@@ -528,11 +528,11 @@ agent:
           agent:
             container:
               connector: account.harnessImage
-              image: pkg.harness.io/vrvdt5ius7uwygso8s0bia/harness-agents/claude-code-plugin:main
+              image: <your-registry>/<your-org-path>/harness-agents/claude-code-plugin:<tag>
             env:
-              ANTHROPIC_MODEL: arn:aws:bedrock:us-east-1:587817102444:application-inference-profile/7p8sn93lhspw
-              AWS_BEARER_TOKEN_BEDROCK: <+secrets.getValue("bedrock_yaml_key")>
-              AWS_REGION: us-east-1
+              ANTHROPIC_MODEL: <your-bedrock-application-inference-profile-arn>
+              AWS_BEARER_TOKEN_BEDROCK: <+secrets.getValue("bedrock_api_key")>
+              AWS_REGION: <your-aws-region>
               CLAUDE_CODE_USE_BEDROCK: "1"
             task: |
               Analyze the test coverage output and generate improvement recommendations.

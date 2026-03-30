@@ -1,8 +1,10 @@
 // Originally auto-generated from https://raw.githubusercontent.com/patelraj0602/harness-schema/agents-schema/v1/pipeline.json
 // MANUALLY MODIFIED: Restructured definitions.pipeline → definitions["agent-pipeline"] for resource type name matching
-// @ts-nocheck
+//
+// @ts-nocheck — large generated JSON-as-TS; nested literals are not worth typing. Consumers treat output as unknown/JSON Schema.
+// TODO: load from .json (import assertion) to drop nocheck and keep a single untyped boundary.
 
-const schema: Record<string, any> = {
+const schema: Record<string, unknown> = {
   "title": "pipeline",
   "oneOf": [
     {
@@ -4936,12 +4938,14 @@ const schema: Record<string, any> = {
 
 // Restructure the schema to use "agent-pipeline" as the definitions key
 // This allows harness_schema tool to find definitions by resource_type="agent-pipeline"
-const restructuredSchema = {
+const defs = schema.definitions as Record<string, unknown> | undefined;
+const pipelineDefs = defs?.pipeline;
+const restructuredSchema: Record<string, unknown> = {
   ...schema,
   title: "agent-pipeline",
   definitions: {
-    "agent-pipeline": schema.definitions.pipeline
-  }
+    "agent-pipeline": pipelineDefs,
+  },
 };
 
 export default restructuredSchema;
