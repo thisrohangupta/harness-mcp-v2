@@ -1,5 +1,5 @@
 import type { ToolsetDefinition } from "../types.js";
-import { ngExtract, pageExtract, v1ListExtract } from "../extractors.js";
+import { ngExtract, pageExtract, v1ListExtract, idpScoreListExtract } from "../extractors.js";
 
 export const idpToolset: ToolsetDefinition = {
   name: "idp",
@@ -170,11 +170,7 @@ export const idpToolset: ToolsetDefinition = {
             size: "limit",
             entity_identifier: "entity_identifier",
           },
-          responseExtractor: (raw: unknown) => {
-            const r = raw as { overall_score?: number; scorecard_scores?: unknown[] };
-            const items = r.scorecard_scores ?? [];
-            return { overall_score: r.overall_score, items, total: items.length };
-          },
+          responseExtractor: idpScoreListExtract,
           description: "List entity scores. Requires entity_identifier filter (format: namespace/Kind/name, e.g. default/Component/my-service).",
         },
         get: {

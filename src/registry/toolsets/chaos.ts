@@ -1,9 +1,11 @@
 import type { ToolsetDefinition } from "../types.js";
 import {
   passthrough,
+  pageExtract,
   chaosPageExtract,
   chaosProbeListExtract,
   chaosInfraListExtract,
+  chaosProbeInRunExtract,
 } from "../extractors.js";
 import {
   descToolsetChaos,
@@ -337,13 +339,7 @@ export const chaosToolset: ToolsetDefinition = {
             }
             return body;
           },
-          responseExtractor: (raw: unknown): { items: unknown[]; total: number } => {
-            const r = raw as { data?: unknown[] };
-            return {
-              items: r.data ?? (Array.isArray(raw) ? raw : []),
-              total: Array.isArray(r.data) ? r.data.length : (Array.isArray(raw) ? (raw as unknown[]).length : 0),
-            };
-          },
+          responseExtractor: chaosProbeInRunExtract,
           description: descListProbesInRun,
           bodySchema: {
             description: descBodyProbesInRun,
@@ -1410,13 +1406,7 @@ export const chaosToolset: ToolsetDefinition = {
             filterType: "Environment",
             ...(input.environment_type ? { environmentTypes: [input.environment_type] } : {}),
           }),
-          responseExtractor: (raw: unknown): { items: unknown[]; total: number } => {
-            const r = raw as { data?: { content?: unknown[]; totalItems?: number } };
-            return {
-              items: r.data?.content ?? [],
-              total: r.data?.totalItems ?? 0,
-            };
-          },
+          responseExtractor: pageExtract,
           description: descListChaosEnvironments,
         },
       },

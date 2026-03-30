@@ -359,11 +359,11 @@ export const pipelinesToolset: ToolsetDefinition = {
             return YAML.stringify(triggerObj);
           },
           responseExtractor: ngExtract,
-          description: "Create a new pipeline trigger. Requires pipeline_id to identify the target pipeline. Use harness_schema(resource_type='trigger') to discover the body structure.",
+          description: "Create a new pipeline trigger. Requires pipeline_id to identify the target pipeline. Use harness_describe(schema_type='trigger') to discover the body structure.",
           bodySchema: {
-            description: "Trigger configuration as JSON — auto-converted to YAML for the API. Pass trigger fields directly (auto-wrapped in trigger envelope). Use harness_schema(resource_type='trigger') for the full schema. The pipeline_id is auto-extracted from pipelineIdentifier in the body.",
+            description: "Trigger configuration as JSON — auto-converted to YAML for the API. Pass trigger fields directly (auto-wrapped in trigger envelope). Use harness_describe(schema_type='trigger') for the full schema. The pipeline_id is auto-extracted from pipelineIdentifier in the body.",
             fields: [
-              { name: "trigger", type: "object", required: false, description: "Wrapper key (optional — body is auto-wrapped if not present). Inner fields: name (required), identifier (required), enabled (bool), pipelineIdentifier (required — target pipeline), source (required — e.g. { type: 'Scheduled', spec: { type: 'Cron', spec: { expression: '0 8 * * *' } } }), inputYaml (optional — runtime input YAML for triggered execution). Use harness_schema(resource_type='trigger', path='trigger_source') for source structure." },
+              { name: "trigger", type: "object", required: false, description: "Wrapper key (optional — body is auto-wrapped if not present). Inner fields: name (required), identifier (required), enabled (bool), pipelineIdentifier (required — target pipeline), source (required — e.g. { type: 'Scheduled', spec: { type: 'Cron', spec: { expression: '0 8 * * *' } } }), inputYaml (optional — runtime input YAML for triggered execution). Use harness_describe(schema_type='trigger', schema_path='trigger_source') for source structure." },
             ],
           },
         },
@@ -388,11 +388,11 @@ export const pipelinesToolset: ToolsetDefinition = {
             return YAML.stringify(triggerObj);
           },
           responseExtractor: ngExtract,
-          description: "Update a pipeline trigger. Use harness_schema(resource_type='trigger') to discover the body structure.",
+          description: "Update a pipeline trigger. Use harness_describe(schema_type='trigger') to discover the body structure.",
           bodySchema: {
-            description: "Full trigger configuration (replaces existing). Pass trigger fields directly — auto-wrapped and converted to YAML. Use harness_schema(resource_type='trigger') for the full schema.",
+            description: "Full trigger configuration (replaces existing). Pass trigger fields directly — auto-wrapped and converted to YAML. Use harness_describe(schema_type='trigger') for the full schema.",
             fields: [
-              { name: "trigger", type: "object", required: false, description: "Wrapper key (optional — body is auto-wrapped if not present). Inner fields: name, identifier, enabled, pipelineIdentifier, source, inputYaml. Use harness_schema for full structure." },
+              { name: "trigger", type: "object", required: false, description: "Wrapper key (optional — body is auto-wrapped if not present). Inner fields: name, identifier, enabled, pipelineIdentifier, source, inputYaml. Use harness_describe(schema_type='trigger') for full structure." },
             ],
           },
         },

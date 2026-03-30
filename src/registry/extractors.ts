@@ -263,6 +263,34 @@ export const chaosInfraListExtract = (raw: unknown): { items: unknown[]; total: 
 };
 
 // ---------------------------------------------------------------------------
+// IDP extractors
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract IDP score list response: { overall_score?, scorecard_scores?: [...] }
+ * Returns { overall_score, items, total } for normalized list consumption.
+ */
+export const idpScoreListExtract = (raw: unknown): { overall_score: unknown; items: unknown[]; total: number } => {
+  const r = raw as { overall_score?: number; scorecard_scores?: unknown[] };
+  const items = r.scorecard_scores ?? [];
+  return { overall_score: r.overall_score, items, total: items.length };
+};
+
+// ---------------------------------------------------------------------------
+// Chaos probe-in-run extractor
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract chaos probe-in-run list response: { data?: unknown[] } or bare array.
+ * The API returns either `{ data: [...] }` or a bare array depending on context.
+ */
+export const chaosProbeInRunExtract = (raw: unknown): { items: unknown[]; total: number } => {
+  const r = raw as { data?: unknown[] };
+  const items = r.data ?? (Array.isArray(raw) ? (raw as unknown[]) : []);
+  return { items, total: items.length };
+};
+
+// ---------------------------------------------------------------------------
 // Feature Management Enterprise (FME) extractors
 // ---------------------------------------------------------------------------
 

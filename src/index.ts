@@ -47,7 +47,7 @@ function createHarnessServer(config: Config): McpServer {
         "• Diagnose failure: harness_diagnose(url='<Harness execution URL>')",
         "",
         "DISCOVERY: Use harness_describe() to list all resource types, or harness_describe(resource_type='<type>') for operations and fields.",
-        "SCHEMA: Use harness_schema(resource_type='<type>') to fetch the exact JSON Schema for create/update body payloads.",
+        "SCHEMA: Use harness_describe(schema_type='<type>') to fetch the exact JSON Schema for create/update body payloads (pipeline, template, trigger).",
         "",
         "PR RESOURCES: pull_request, pr_comment, pr_activity, pr_reviewer, pr_check — all accept URL or explicit repo_id + pr_number.",
       ].join("\n"),
