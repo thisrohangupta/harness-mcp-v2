@@ -303,3 +303,22 @@ export const fmeGetExtract = (raw: unknown): unknown => {
   }
   return raw;
 };
+
+// ---------------------------------------------------------------------------
+// Documentation chatbot extractors
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps the chatbot's response into the standard list format
+ * so harness_search and harness_list can display it uniformly.
+ * Preserves the full response object (answer + sources) when present.
+ */
+export const chatbotResponseExtract = (raw: unknown): { items: unknown[]; total: number } => {
+  if (typeof raw === "string") {
+    return { items: [{ answer: raw }], total: 1 };
+  }
+  if (typeof raw === "object" && raw !== null && "answer" in raw) {
+    return { items: [raw], total: 1 };
+  }
+  return { items: [{ answer: JSON.stringify(raw) }], total: 1 };
+};
