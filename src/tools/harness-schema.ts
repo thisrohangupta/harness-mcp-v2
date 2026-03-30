@@ -1,10 +1,12 @@
 import * as z from "zod/v4";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { jsonResult, errorResult } from "../utils/response-formatter.js";
-import { createLogger } from "../utils/logger.js";
 import { SCHEMAS, VALID_SCHEMAS } from "../data/schemas/index.js";
 
-const log = createLogger("tool:harness-schema");
+/** Schemas whose root is not definitions[resourceType][resourceType] (e.g. top-level oneOf). */
+const SCHEMA_ROOT_DEFINITION_KEY: Partial<Record<(typeof VALID_SCHEMAS)[number], string>> = {
+  "agent-pipeline": "pipeline",
+};
 
 /**
  * Resolve a $ref pointer within the schema.
@@ -89,15 +91,79 @@ function navigateToPath(
 }
 
 /**
+ * Summarize a JSON Schema root that is a oneOf (e.g. agent-pipeline: template vs agent vs pipeline body).
+ */
+function getOneOfRootSummary(schema: Record<string, unknown>, resourceType: string, sections: string[]): Record<string, unknown> {
+  const oneOf = schema.oneOf;
+  if (!Array.isArray(oneOf)) {
+    return {
+      resource_type: resourceType,
+      fields: [],
+      available_sections: sections,
+      hint: "Use path to drill into definitions (e.g. path='Agent' for agent step schema).",
+    };
+  }
+
+  const variants: Array<{
+    variant_index: number;
+    required: string[];
+    properties: string[];
+    description: string;
+  }> = [];
+
+  for (let i = 0; i < oneOf.length; i++) {
+    const branch = oneOf[i];
+    if (!branch || typeof branch !== "object" || Array.isArray(branch)) continue;
+    const b = branch as Record<string, unknown>;
+    const req = Array.isArray(b.required) ? (b.required as string[]) : [];
+    const props = b.properties as Record<string, unknown> | undefined;
+    const keys = props ? Object.keys(props) : [];
+    const desc =
+      req.length > 0
+        ? `Requires: ${req.join(", ")}`
+        : keys.length > 0
+          ? `Optional shape keys: ${keys.slice(0, 8).join(", ")}${keys.length > 8 ? ", …" : ""}`
+          : "Branch (see schema for details)";
+    variants.push({
+      variant_index: i + 1,
+      required: req,
+      properties: keys,
+      description: desc,
+    });
+  }
+
+  return {
+    resource_type: resourceType,
+    summary_kind: "oneOf_root",
+    variants,
+    available_sections: sections,
+    hint:
+      "Root document is a oneOf: pick the variant that matches your YAML (e.g. agent-first vs template). " +
+      "Use path='Agent', path='stages', path='steps' to drill into definition sections.",
+  };
+}
+
+/**
  * Get a compact summary of the top-level structure: property names, types,
  * required fields, and available definition sections.
  */
-function getSummary(schema: Record<string, unknown>, resourceType: string): Record<string, unknown> {
+/** Exported for tests — same logic used by harness_schema when path is omitted. */
+export function getHarnessSchemaSummary(schema: Record<string, unknown>, resourceType: string): Record<string, unknown> {
   const definitions = schema.definitions as Record<string, Record<string, unknown>> | undefined;
   const sections = definitions ? Object.keys(definitions[resourceType] ?? {}) : [];
 
-  // Get the root resource definition
-  const rootDef = definitions?.[resourceType]?.[resourceType] as Record<string, unknown> | undefined;
+  const rootKey = SCHEMA_ROOT_DEFINITION_KEY[resourceType as keyof typeof SCHEMA_ROOT_DEFINITION_KEY] ?? resourceType;
+
+  // Get the root resource definition (default: definitions[rt][rt])
+  let rootDef = definitions?.[resourceType]?.[rootKey] as Record<string, unknown> | undefined;
+  if (!rootDef && rootKey !== resourceType) {
+    rootDef = definitions?.[resourceType]?.[resourceType] as Record<string, unknown> | undefined;
+  }
+
+  if (!rootDef && resourceType === "agent-pipeline" && schema.oneOf) {
+    return getOneOfRootSummary(schema, resourceType, sections);
+  }
+
   const properties = rootDef?.properties as Record<string, unknown> | undefined;
   const required = rootDef?.required as string[] | undefined;
 
@@ -159,7 +225,7 @@ export function registerSchemaTool(server: McpServer): void {
 
         // No path → return summary
         if (!args.path) {
-          return jsonResult(getSummary(schema, args.resource_type));
+          return jsonResult(getHarnessSchemaSummary(schema, args.resource_type));
         }
 
         // Navigate to the requested path
