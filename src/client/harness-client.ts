@@ -82,17 +82,16 @@ export class HarnessClient {
 
     const method = options.method ?? "GET";
     const url = this.buildUrl(options);
-    const isFme = options.product === "fme";
+    const isExternalProduct = options.product === "fme" || options.product === "chatbot";
     const headers: Record<string, string> = {
-      "Harness-Account": this.accountId,
+      ...(isExternalProduct ? {} : { "Harness-Account": this.accountId }),
       ...options.headers,
     };
 
-    // Only inject x-api-key when the caller hasn't already set auth.
-    // When service-routing handles auth (bearer-jwt, remote-mcp), it sets
-    // Authorization directly — sending x-api-key alongside would cause
-    // downstream services to attempt API-key validation on the dummy token.
-    if (!headers["Authorization"] && !headers["x-api-key"]) {
+    // Only inject x-api-key for Harness-native requests.
+    // External products (FME, chatbot) manage their own auth via
+    // product-specific headers set in the registry dispatch layer.
+    if (!isExternalProduct && !headers["Authorization"] && !headers["x-api-key"]) {
       headers["x-api-key"] = this.token;
     }
 
@@ -240,14 +239,14 @@ export class HarnessClient {
 
     const method = options.method ?? "POST";
     const url = this.buildUrl(options);
-    const isFme = options.product === "fme";
+    const isExternalProduct = options.product === "fme" || options.product === "chatbot";
     const headers: Record<string, string> = {
-      "Harness-Account": this.accountId,
+      ...(isExternalProduct ? {} : { "Harness-Account": this.accountId }),
       ...options.headers,
     };
 
     // Same auth-header guard as request() — see comment there.
-    if (!headers["Authorization"] && !headers["x-api-key"]) {
+    if (!isExternalProduct && !headers["Authorization"] && !headers["x-api-key"]) {
       headers["x-api-key"] = this.token;
     }
 

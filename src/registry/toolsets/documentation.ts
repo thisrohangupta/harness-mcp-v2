@@ -1,19 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { ToolsetDefinition } from "../types.js";
+import type { ToolsetDefinition, BodySchema } from "../types.js";
+import { chatbotResponseExtract } from "../extractors.js";
 
-/**
- * Wraps the chatbot's response into the standard list format
- * so harness_search and harness_list can display it uniformly.
- * Preserves the full response object (answer + sources) when present.
- */
-const chatbotResponseExtract = (raw: unknown): { items: unknown[]; total: number } => {
-  if (typeof raw === "string") {
-    return { items: [{ answer: raw }], total: 1 };
-  }
-  if (typeof raw === "object" && raw !== null && "answer" in raw) {
-    return { items: [raw], total: 1 };
-  }
-  return { items: [{ answer: JSON.stringify(raw) }], total: 1 };
+const chatbotListSchema: BodySchema = {
+  description: "Question payload for the Harness documentation chatbot",
+  fields: [
+    { name: "question", type: "string", required: true, description: "The question to ask (mapped from search_term/query)" },
+    { name: "chat_history", type: "array", required: false, description: "Previous Q&A pairs for multi-turn context. Each item has 'question' and 'answer' fields.", itemType: "{ question: string, answer: string }" },
+  ],
 };
 
 export const documentationToolset: ToolsetDefinition = {
@@ -33,6 +27,7 @@ export const documentationToolset: ToolsetDefinition = {
       toolset: "documentation",
       scope: "account",
       product: "chatbot",
+      diagnosticHint: "If queries fail, ensure HARNESS_CHATBOT_BASE_URL is set in server configuration. The chatbot endpoint must be reachable from the MCP server.",
       identifierFields: [],
       listFilterFields: [
         { name: "question", description: "The question to ask the documentation chatbot" },
@@ -52,6 +47,7 @@ export const documentationToolset: ToolsetDefinition = {
             }
             return body;
           },
+          bodySchema: chatbotListSchema,
           headersBuilder: (input: Record<string, unknown>) => {
             const headers: Record<string, string> = {
               "X-Request-ID": randomUUID(),
