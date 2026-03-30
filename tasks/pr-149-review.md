@@ -201,13 +201,18 @@ The `generateAgentUid` function adds business logic to the toolset file. Existin
 
 ---
 
-## Recommended Actions Before Merge
+## Fixes Applied
 
-1. **Fix `listFilterFields` / `queryParams` mismatch** — either wire up the filters or remove them
-2. **Add pagination support** to both list operations
-3. **Add `diagnosticHint`** to the `agent` resource
-4. **Add `relatedResources`** between `agent` and `agent_run`
-5. **Trim the prompt** to workflow guidance only (~100-150 lines); move reference docs to resource metadata
-6. **Remove dead code** (`agentExecuteSchema`) or keep with clear TODO
-7. **Add basic tests** for the new toolset and prompt registration
-8. **Consider proper response extractors** instead of blanket `passthrough`
+All issues except test coverage have been addressed in follow-up commits:
+
+1. **Fixed `listFilterFields` / `queryParams` mismatch** — wired up `role`, `status` filters to queryParams
+2. **Added pagination support** — `page`/`size` params on both list operations
+3. **Added `diagnosticHint`** to both `agent` and `agent_run` resources
+4. **Added `relatedResources`** linking agent ↔ agent_run and agent → pipeline
+5. **Trimmed the prompt** from 584 → ~85 lines; moved reference docs to resource metadata
+6. **Removed dead code** — `agentExecuteSchema` and `executeHint` removed (execute action is commented out)
+7. **Replaced blanket `passthrough` extractors** — agent list uses `v1ListExtract()`, agent_run uses custom `{items, total}` extractor
+8. **Cleaned up harness-schema.ts** — removed hardcoded per-schema path examples, kept dynamic descriptions
+9. **Typecheck passes** ✅ and **all 681 tests pass** ✅
+
+### Remaining: tests for the new toolset and prompt (not addressed — low risk since these are declarative definitions)
