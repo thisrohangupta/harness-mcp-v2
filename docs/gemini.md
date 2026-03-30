@@ -1,6 +1,6 @@
 # Harness MCP Server — Gemini CLI Context
 
-This extension connects Gemini CLI to the Harness Platform through 10 consolidated MCP tools that cover 137 resource types across 29 toolsets.
+This extension connects Gemini CLI to the Harness Platform through 11 consolidated MCP tools that cover 148 resource types across 29 toolsets.
 
 ## How This Server Works
 
@@ -23,6 +23,7 @@ Unlike traditional MCP servers with one tool per API endpoint, this server uses 
 - `harness_search` — Search across multiple resource types at once
 - `harness_diagnose` — Diagnose pipelines, connectors, delegates, and GitOps applications
 - `harness_status` — Project health overview: failed, running, and recent executions
+- `harness_schema` — Fetch exact JSON Schema for create/update payloads (with deep `path` drilling)
 
 ## Available Capabilities
 
@@ -51,7 +52,7 @@ Unlike traditional MCP servers with one tool per API endpoint, this server uses 
 
 ### Security & Compliance
 - Security Test Orchestration (STO): manage issues, approve/reject exemptions
-- Supply Chain Security (SCS): track artifacts, compliance, SBOMs, chain of custody
+- Supply Chain Security (SCS): track artifacts, dependencies, compliance, SBOMs, remediation, and remediation PR workflows
 - Audit trail: comprehensive audit logs for governance
 
 ### GitOps

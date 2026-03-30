@@ -9,7 +9,7 @@
 | **Operations** | get |
 | **Execute Actions** | None |
 | **Identifier Fields** | prefix |
-| **Filter Fields** | execution_id |
+| **Filter Fields** | execution_id, step_id, stage_id, stage_execution_id |
 | **Deep Link** | No |
 
 ## Test Cases
@@ -19,8 +19,11 @@
 | TC-log-001 | Get | Get execution log by raw prefix | `harness_get(resource_type="execution_log", prefix="accountId/orgId/projectId/pipelineId/runSequence/nodeId")` | Returns readable log text content for the specified step |
 | TC-log-002 | Get | Get execution log by execution_id | `harness_get(resource_type="execution_log", execution_id="abc123xyz")` | Auto-resolves log key from execution metadata and returns log content |
 | TC-log-003 | Get | Get execution log with scope overrides | `harness_get(resource_type="execution_log", prefix="my/log/prefix", org_id="other_org", project_id="other_project")` | Returns log from specified org/project scope |
-| TC-log-004 | Get | Get execution log for a specific step | `harness_get(resource_type="execution_log", execution_id="exec123", step_id="step_deploy")` | Returns log content for the specific step in the execution |
-| TC-log-005 | Get | Get execution log for a specific stage | `harness_get(resource_type="execution_log", execution_id="exec123", stage_id="stage_build")` | Returns log content for the specific stage |
+| TC-log-004 | Get | Get execution log for a specific step | `harness_get(resource_type="execution_log", execution_id="exec123", step_id="step_deploy")` | Returns log content for the matching step node when logBaseKey is available |
+| TC-log-005 | Get | Get execution log for a specific stage | `harness_get(resource_type="execution_log", execution_id="exec123", stage_id="stage_build")` | Returns stage-scoped log when the selected stage node exposes a log key |
+| TC-log-014 | Get | Get execution log for a specific stage execution node | `harness_get(resource_type="execution_log", execution_id="exec123", stage_execution_id="2f4f4f8c-...")` | Returns the matching stage execution log when present |
+| TC-log-015 | Diagnose | Diagnose from Harness URL and fetch selected step log | `harness_diagnose(url="https://app.harness.io/ng/account/.../pipelines/myPipeline/executions/abc123XYZ/pipeline?step=2f4f4f8c-...", options={include_logs:true})` | Returns `requested_step_log` for the selected step even when step status is not Failed |
+| TC-log-016 | Diagnose | Requested step also appears in failed_step_logs | `harness_diagnose(url="https://app.harness.io/ng/account/.../pipelines/myPipeline/executions/abc123XYZ/pipeline?step=<failed_node_id>", options={include_logs:true, max_failed_steps:1})` | Returns the requested step log once (no duplicate fetch when already present in capped `failed_step_logs`) |
 | TC-log-006 | Scope | Get execution log with different org_id | `harness_get(resource_type="execution_log", execution_id="exec123", org_id="custom_org")` | Returns log from specified org |
 | TC-log-007 | Scope | Get execution log with different project_id | `harness_get(resource_type="execution_log", execution_id="exec123", org_id="default", project_id="other_project")` | Returns log from specified project |
 | TC-log-008 | Error | Get log with non-existent prefix | `harness_get(resource_type="execution_log", prefix="nonexistent/log/prefix/xyz")` | Error or empty: log not found |
@@ -35,7 +38,8 @@
 - The get operation uses a POST method to `/gateway/log-service/blob/download`.
 - The `prefix` identifier is a raw Harness logBaseKey string (e.g. `accountId/orgId/projectId/pipelineId/runSequence/nodeId`).
 - The `execution_id` filter auto-resolves the log prefix from execution metadata.
+- When `step_id`, `stage_id`, or `stage_execution_id` are provided, prefix resolution prefers matching graph nodes before falling back to pipeline-level logs.
 - The response extractor uses `passthrough` — returns raw log text as-is.
 - No deep link template is defined for execution logs.
 - For best failure analysis, use `harness_diagnose` with `include_logs=true` instead of direct log retrieval.
-- When a Harness execution URL includes step/stage query params, the MCP uses them to resolve the matching step log key.
+- When a Harness execution URL includes `?step`, `?stage`, or `?stageExecId`, the MCP parses those values into `step_id`, `stage_id`, and `stage_execution_id` for log-key resolution.

@@ -83,3 +83,15 @@
 - Aligned public inventory claims with current source of truth: 10 tools, 29 toolsets, 137 resource types.
 - Added concrete pipeline runtime-input shorthand mapping (`branch`, `tag`, `pr_number`, `commit_sha`) and documented the `inputs.build` precedence constraint.
 - Added troubleshooting guidance for shorthand non-application and linked shorthand discovery to `harness_describe(resource_type="pipeline")`.
+
+## Documentation Alignment Automation (2026-03-30)
+- [x] Audit recent code-path changes and current docs for drift (`execution_log`, `harness_diagnose`, SCS remediation)
+- [x] Update public docs to match current interfaces and inventory (`README.md`, `docs/gemini.md`)
+- [x] Update targeted testing docs for changed behavior/constraints (`docs/testing/*`)
+- [x] Verify docs consistency with source via targeted searches/diff review
+- [ ] Commit and push docs-only changes
+
+### Review
+- Updated user-facing inventory and architecture references to current source-of-truth counts (11 tools, 29 toolsets, 148 resource types).
+- Expanded documentation for pipeline diagnosis/log workflows, including URL-driven step-log retrieval (`requested_step_log`) and execution log selector fields (`step_id`, `stage_id`, `stage_execution_id`).
+- Aligned SCS remediation documentation with current API mapping and interfaces (explicit `target_version` -> upstream `targetVersion`, get-only operation boundaries, and full SCS resource coverage in README).

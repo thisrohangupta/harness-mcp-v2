@@ -9,7 +9,7 @@
 | **Operations** | get |
 | **Execute Actions** | None |
 | **Identifier Fields** | artifact_id |
-| **Filter Fields** | _(none — uses purl, target_version query params)_ |
+| **Filter Fields** | purl (required), target_version (optional) |
 | **Deep Link** | Yes (`/ng/account/{accountId}/all/orgs/{orgIdentifier}/projects/{projectIdentifier}/supply-chain/artifacts/{artifactId}`) |
 
 ## Test Cases
@@ -17,7 +17,7 @@
 | Test ID | Category | Description | Prompt | Expected Result |
 |---------|----------|-------------|--------|-----------------|
 | TC-SAR-001 | Get | Get remediation advice with purl | `harness_get(resource_type="scs_artifact_remediation", artifact_id="art-1", purl="pkg:npm/lodash@4.17.20")` | Returns remediation advice for the component |
-| TC-SAR-002 | Get / Query | Get with target_version | `harness_get(resource_type="scs_artifact_remediation", artifact_id="art-1", purl="pkg:npm/lodash@4.17.20", target_version="4.17.21")` | Returns remediation advice targeting specific version |
+| TC-SAR-002 | Get / Query | Get with target_version | `harness_get(resource_type="scs_artifact_remediation", artifact_id="art-1", params={purl:"pkg:npm/lodash@4.17.20", target_version:"4.17.21"})` | Returns remediation advice targeting specific version |
 | TC-SAR-003 | Get / Query | Get with Maven purl | `harness_get(resource_type="scs_artifact_remediation", artifact_id="art-1", purl="pkg:maven/org.apache.commons/commons-lang3@3.12.0")` | Returns remediation for Maven component |
 | TC-SAR-004 | Get / Query | Get with Python purl | `harness_get(resource_type="scs_artifact_remediation", artifact_id="art-1", purl="pkg:pypi/requests@2.28.0")` | Returns remediation for Python component |
 | TC-SAR-005 | Scope | Get with explicit org_id and project_id | `harness_get(resource_type="scs_artifact_remediation", artifact_id="art-1", purl="pkg:npm/lodash@4.17.20", org_id="my-org", project_id="my-project")` | Returns remediation for specified org/project |
@@ -32,6 +32,7 @@
 ## Notes
 - `scs_artifact_remediation` only supports `get` via `GET /ssca-manager/v1/orgs/{org}/projects/{project}/artifacts/{artifact}/component/remediation`.
 - Path params: `org_id` → `org`, `project_id` → `project`, `artifact_id` → `artifact`.
-- Query params: `purl` (package URL), `target_version` (optional recommended version).
+- Query params: `purl` (package URL, required), `target_version` (optional; mapped to upstream `targetVersion`).
 - The `purl` (Package URL) follows the purl-spec format: `pkg:{type}/{namespace}/{name}@{version}`.
 - This endpoint provides remediation advice for vulnerable components identified in SBOMs.
+- This resource only supports `get`; `list/create/update/delete` are unsupported.
