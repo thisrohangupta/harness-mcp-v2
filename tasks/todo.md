@@ -89,7 +89,7 @@
 - [x] Update public docs to match current interfaces and inventory (`README.md`, `docs/gemini.md`)
 - [x] Update targeted testing docs for changed behavior/constraints (`docs/testing/*`)
 - [x] Verify docs consistency with source via targeted searches/diff review
-- [ ] Commit and push docs-only changes
+- [x] Commit and push docs-only changes
 
 ### Review
 - Updated user-facing inventory and architecture references to current source-of-truth counts (11 tools, 29 toolsets, 148 resource types).
