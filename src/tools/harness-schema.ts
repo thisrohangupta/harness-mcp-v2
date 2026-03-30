@@ -130,7 +130,7 @@ export function registerSchemaTool(server: McpServer): void {
         "Fetch Harness YAML schema for a resource type. Returns the JSON Schema definition " +
         "so you know the exact body structure for harness_create/harness_update. " +
         "Use without path for a summary of fields and available sections. " +
-        "Use with path to drill into a specific section (e.g. path='Agent' for agent structure, path='scheduled_trigger' for cron trigger spec). " +
+        "Use with path to drill into a specific section. " +
         `Available schemas: ${VALID_SCHEMAS.join(", ")}.`,
       inputSchema: {
         resource_type: z
